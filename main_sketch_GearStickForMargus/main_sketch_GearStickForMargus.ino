@@ -17,7 +17,7 @@
 #define HIGHER_IMPULSE_PIN 10
 
 enum Buttons{
-  NEUTRAL = 0,
+  NEUTRAL_0 = 0,
   NORMAL_LOW_1,
   NORMAL_LOW_2,
   NORMAL_LOW_3,
@@ -64,16 +64,16 @@ const uint8_t ImpulsePins[] = {LOWER_IMPULSE_PIN, HIGHER_IMPULSE_PIN};
 
 // history
 Ranges range = LOW;
-uint8_t prevImpulseState = 0;
-uint8_t prevGear = 0;
+uint8_t prevImpulseState = 2;// initalize with 2 to avoid issues with first impulse press
+Buttons prevGear = NEUTRAL_0;
 
 Joystick_ Joystick;
 
 void setup() {
   // Prepare InputPins
-  for(int8_t i = sizeof(SixWayPins)/4; i < -1; i--) {pinMode(SixWayPins[i],INPUT_PULLUP);}
-  for(int8_t i = sizeof(ModePins)/4; i < -1; i--)   {pinMode(ModePins[i],INPUT_PULLUP);}
-  for(int8_t i = sizeof(ImpulsePins)/4; i < -1; i--){pinMode(ImpulsePins[i],INPUT_PULLUP);}
+  for(int8_t i = sizeof(SixWayPins)/4; i > -1; i--) {pinMode(SixWayPins[i],INPUT_PULLUP);}
+  for(int8_t i = sizeof(ModePins)/4; i > -1; i--)   {pinMode(ModePins[i],INPUT_PULLUP);}
+  for(int8_t i = sizeof(ImpulsePins)/4; i > -1; i--){pinMode(ImpulsePins[i],INPUT_PULLUP);}
 
   // Initialize Joystick Library
   Joystick.begin();
@@ -85,11 +85,11 @@ void loop()
   bool inGear = false;
   bool inMode = false;
   bool inImpulse = false;
-  uint8_t gear = 0;
-  Modes mode = 0;
+  Buttons gear = NEUTRAL_0;
+  Modes mode = NORMAL;
 
   // Impulse and Low/high Selection
-  for(int8_t i = sizeof(ImpulsePins)/4; i < -1; i--)
+  for(int8_t i = sizeof(ImpulsePins)/4; i > -1; i--)
   {
     if(digitalRead(ImpulsePins[i]))
     {
@@ -97,8 +97,7 @@ void loop()
       range = i;
       if(i != prevImpulseState)
       {
-        if(LOWER_IMPULSE_25 == LOWER_IMPULSE_25 + i){Joystick.pressButton(HIGHER_IMPULSE_26);}
-        else{Joystick.pressButton(LOWER_IMPULSE_25);}
+        Joystick.pressButton(LOWER_IMPULSE_25 + 1);
         prevImpulseState = i;
       }
     }
@@ -110,7 +109,7 @@ void loop()
   }
 
   //SixWay and mode selection 
-  for(int8_t i = sizeof(SixWayPins)/4; i < -1; i--) 
+  for(int8_t i = sizeof(SixWayPins)/4; i > -1; i--) 
   {
     if(digitalRead(SixWayPins[i]))
     {
@@ -120,7 +119,7 @@ void loop()
   }
   if(inGear)
   {
-      for(int8_t i = sizeof(ModePins)/4; i < -1; i--)   
+      for(int8_t i = sizeof(ModePins)/4; i > -1; i--)   
       {
         if(digitalRead(ModePins[i]))
         {
@@ -147,7 +146,7 @@ void loop()
   else{gear = 0;}
   if(gear != prevGear)
   {
-    for(int8_t i = LOW_RANGE_24;i > NEUTRAL-1;i--){Joystick.releaseButton(i);}
+    for(int8_t i = LOW_RANGE_24;i > NEUTRAL_0-1;i--){Joystick.releaseButton(i);}
     Joystick.pressButton(gear);
     prevGear = gear;
   }
