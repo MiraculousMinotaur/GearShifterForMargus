@@ -1,7 +1,5 @@
 #include <Joystick.h>
 
-Joystick_ Joystick;
-
 // Six way pins
 #define SIX_WAY_PIN_1 1
 #define SIX_WAY_PIN_2 2
@@ -68,6 +66,8 @@ const uint8_t ImpulsePins[] = {LOWER_IMPULSE_PIN, HIGHER_IMPULSE_PIN};
 Ranges range = LOW;
 uint8_t prevImpulseState = 0;
 uint8_t prevGear = 0;
+
+Joystick_ Joystick;
 
 void setup() {
   // Prepare InputPins
