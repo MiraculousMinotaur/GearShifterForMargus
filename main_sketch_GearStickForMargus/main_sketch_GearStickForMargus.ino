@@ -16,6 +16,8 @@
 #define LOWER_IMPULSE_PIN   9
 #define HIGHER_IMPULSE_PIN 10
 
+#define MAIN_STICK_SIZE 6
+
 enum Buttons{
   NEUTRAL_0 = 0,
   NORMAL_LOW_1,
@@ -64,19 +66,20 @@ const uint8_t ImpulsePins[] = {LOWER_IMPULSE_PIN, HIGHER_IMPULSE_PIN};
 
 // history
 Ranges range = LOW;
-uint8_t prevImpulseState = 2;// initalize with 2 to avoid issues with first impulse press
+uint8_t prevImpulseState = 0;
 Buttons prevGear = NEUTRAL_0;
 
 Joystick_ Joystick;
 
 void setup() {
   // Prepare InputPins
-  for(int8_t i = sizeof(SixWayPins)/4; i > -1; i--) {pinMode(SixWayPins[i],INPUT_PULLUP);}
-  for(int8_t i = sizeof(ModePins)/4; i > -1; i--)   {pinMode(ModePins[i],INPUT_PULLUP);}
-  for(int8_t i = sizeof(ImpulsePins)/4; i > -1; i--){pinMode(ImpulsePins[i],INPUT_PULLUP);}
+  for(int8_t i = sizeof(SixWayPins); i > -1; i--) {pinMode(SixWayPins[i],INPUT_PULLUP);}
+  for(int8_t i = sizeof(ModePins); i > -1; i--)   {pinMode(ModePins[i],INPUT_PULLUP);}
+  for(int8_t i = sizeof(ImpulsePins); i > -1; i--){pinMode(ImpulsePins[i],INPUT_PULLUP);}
 
   // Initialize Joystick Library
   Joystick.begin();
+  Joystick.pressButton(NEUTRAL_0);
 }
 
 void loop() 
@@ -89,15 +92,15 @@ void loop()
   Modes mode = NORMAL;
 
   // Impulse and Low/high Selection
-  for(int8_t i = sizeof(ImpulsePins)/4; i > -1; i--)
+  for(int8_t i = sizeof(ImpulsePins); i > 0; i--)
   {
-    if(digitalRead(ImpulsePins[i]))
+    if(!digitalRead(ImpulsePins[i-1]))
     {
       inImpulse = true;
-      range = i;
+      range = i-1;
       if(i != prevImpulseState)
       {
-        Joystick.pressButton(LOWER_IMPULSE_25 + 1);
+        Joystick.pressButton(LOWER_IMPULSE_25 + range);
         prevImpulseState = i;
       }
     }
@@ -109,34 +112,34 @@ void loop()
   }
 
   //SixWay and mode selection 
-  for(int8_t i = sizeof(SixWayPins)/4; i > -1; i--) 
+  for(int8_t i = sizeof(SixWayPins); i > 0; i--) 
   {
-    if(digitalRead(SixWayPins[i]))
+    if(!digitalRead(SixWayPins[i-1]))
     {
       inGear = true;
-      gear = i+1;
+      gear = i;
     }
   }
   if(inGear)
   {
-      for(int8_t i = sizeof(ModePins)/4; i > -1; i--)   
+      for(int8_t i = sizeof(ModePins); i > 0; i--)   
       {
-        if(digitalRead(ModePins[i]))
+        if(!digitalRead(ModePins[i-1]))
         {
           inMode = true;
-          mode = i+1;
+          mode = i;
         }
       }
       switch(mode)
       {
         case NORMAL:
-          if(HIGH_RANGE == range){gear = gear*2;}
+          if(HIGH_RANGE == range){gear = gear + MAIN_STICK_SIZE;}
           break;
         case REVERSE:
-          gear = gear*3;
+          gear = gear + MAIN_STICK_SIZE * 2;
           break;
         case LOW_RANGE_MODE:
-          gear = gear*4;
+          gear = gear + MAIN_STICK_SIZE * 3;
           break;
         default:break;
         //This should not happen
