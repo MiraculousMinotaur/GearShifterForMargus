@@ -71,6 +71,7 @@ void loop()
       {
         Joystick.pressButton(IMPULSE_1 + i-1);
         prevImpulseState = i;
+        break;//only read on of the gears
       }
     }
   }
@@ -78,6 +79,7 @@ void loop()
   {
     Joystick.releaseButton(IMPULSE_1);
     Joystick.releaseButton(IMPULSE_2);
+    prevImpulseState = 0;
   }
 
   // mode Latch Selection
@@ -90,6 +92,7 @@ void loop()
       {
         Joystick.pressButton(REVERSE + i-1);
         prevModeState = i;
+        break;//only read on of the gears
       }
     }
   }
@@ -97,6 +100,7 @@ void loop()
   {
     Joystick.releaseButton(REVERSE);
     Joystick.releaseButton(HIGH_RANGE);
+    prevModeState = 0;
   }
 
   //SixWay
@@ -109,12 +113,14 @@ void loop()
       {
         Joystick.pressButton(i-1);
         prevGearState = i;
+        break;//only read on of the gears
       }
     }
   }
   if(!inGear)
   {
     for(int8_t i = NORMAL_6;i > NORMAL_1-1;i--){Joystick.releaseButton(i);}
+    prevGearState = 0;
   }
   delay(50);
 }
