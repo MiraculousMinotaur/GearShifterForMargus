@@ -1,20 +1,20 @@
 #include <Joystick.h>
 
 // Six way pins
-#define SIX_WAY_PIN_1 1
-#define SIX_WAY_PIN_2 2
-#define SIX_WAY_PIN_3 3
-#define SIX_WAY_PIN_4 4
-#define SIX_WAY_PIN_5 5
-#define SIX_WAY_PIN_6 6
+#define SIX_WAY_PIN_1 A2
+#define SIX_WAY_PIN_2 A5
+#define SIX_WAY_PIN_3 A1
+#define SIX_WAY_PIN_4 A4
+#define SIX_WAY_PIN_5 A0
+#define SIX_WAY_PIN_6 A3
 
 // Mode switch pins
-#define MODE_PIN_1 7 //Reverse
-#define MODE_PIN_2 8 //Low_Range
+#define MODE_PIN_1 10 //Reverse
+#define MODE_PIN_2 11 //Low_Range
 
 // Impulse switch pins also works as High/Low for normal mode 
 #define LOWER_IMPULSE_PIN   9
-#define HIGHER_IMPULSE_PIN 10
+#define HIGHER_IMPULSE_PIN 8
 
 #define MAIN_STICK_SIZE 6
 
@@ -51,7 +51,6 @@ void setup() {
 
   // Initialize Joystick Library
   Joystick.begin();
-  Joystick.pressButton(NORMAL_1);
 }
 
 void loop() 
@@ -71,8 +70,8 @@ void loop()
       {
         Joystick.pressButton(IMPULSE_1 + i-1);
         prevImpulseState = i;
-        break;//only read one of the gears
       }
+      break;//only read one of the gears
     }
   }
   if(!inImpulse)
@@ -92,8 +91,8 @@ void loop()
       {
         Joystick.pressButton(REVERSE + i-1);
         prevModeState = i;
-        break;//only read one of the gears
       }
+      break;//only read one of the gears
     }
   }
   if(!inMode)
@@ -111,10 +110,11 @@ void loop()
       inGear = true;
       if(i != prevGearState)
       {
+        for(int8_t i = NORMAL_6;i > NORMAL_1-1;i--){Joystick.releaseButton(i);}// Can only be in one gear at a time
         Joystick.pressButton(i-1);
         prevGearState = i;
-        break;//only read one of the gears
       }
+      break;//only read one of the gears
     }
   }
   if(!inGear)
