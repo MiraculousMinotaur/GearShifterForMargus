@@ -66,11 +66,12 @@ void loop()
     if(!digitalRead(ImpulsePins[i-1]))
     {
       inImpulse = true;
-      if(i != prevImpulseState)
+      if(!prevImpulseState) // gear change can only happen through neutral
       {
         Joystick.pressButton(IMPULSE_1 + i-1);
         prevImpulseState = i;
       }
+      else if(prevImpulseState != i && digitalRead(ImpulsePins[prevImpulseState-1])){inImpulse = false;} // Neutral not detected during gear change
       break;//only read one of the gears
     }
   }
@@ -87,11 +88,12 @@ void loop()
     if(!digitalRead(ModePins[i-1]))
     {
       inMode = true;
-      if(i != prevModeState)
+      if(!prevModeState) // gear change can only happen through neutral
       {
         Joystick.pressButton(REVERSE + i-1);
         prevModeState = i;
       }
+      else if(prevModeState != i && digitalRead(ModePins[prevModeState-1])){inMode = false;} // Neutral not detected during gear change
       break;//only read one of the gears
     }
   }
@@ -108,12 +110,12 @@ void loop()
     if(!digitalRead(SixWayPins[i-1]))
     {
       inGear = true;
-      if(i != prevGearState)
+      if(!prevGearState) // gear change can only happen through neutral
       {
-        for(int8_t i = NORMAL_6;i > NORMAL_1-1;i--){Joystick.releaseButton(i);}// Can only be in one gear at a time
         Joystick.pressButton(i-1);
         prevGearState = i;
       }
+      else if(prevGearState != i && digitalRead(SixWayPins[prevGearState-1])){inGear = false;} // Neutral not detected during gear change
       break;//only read one of the gears
     }
   }
