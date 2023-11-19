@@ -1,12 +1,37 @@
 #include <Joystick.h>
 
+// Pedal Pins
+
+#define ACCELERATOR_PIN A0
+#define BRAKE_PIN A1
+#define CLUTCH_PIN A2
+
+// Pedal Range
+#define PEDAL_MIN_VALUE 0 
+#define PEDAL_MAX_VALUE 255
+#define PEDAL_RANGE (PEDAL_MAX_VALUE-PEDAL_MIN_VALUE)
+
+// Pedal Calibration
+#define ACCELERATOR_REAL_MIN_VALUE 0 
+#define ACCELERATOR_REAL_MAX_VALUE 1023
+#define ACCELERATOR_REAL_RANGE (ACCELERATOR_REAL_MAX_VALUE-ACCELERATOR_REAL_MIN_VALUE)
+#define ACCELERATOR_REAL_TO_OUT_CONVERSION (ACCELERATOR_REAL_RANGE/PEDAL_RANGE)
+#define BRAKE_REAL_MIN_VALUE 0 
+#define BRAKE_REAL_MAX_VALUE 1023
+#define BRAKE_REAL_RANGE (BRAKE_REAL_MAX_VALUE-BRAKE_REAL_MIN_VALUE)
+#define BRAKE_REAL_TO_OUT_CONVERSION (ACCELERATOR_REAL_RANGE/PEDAL_RANGE)
+#define CLUTCH_REAL_MIN_VALUE 0 
+#define CLUTCH_REAL_MAX_VALUE 1023
+#define CLUTCH_REAL_RANGE (CLUTCH_REAL_MAX_VALUE-CLUTCH_REAL_MIN_VALUE)
+#define CLUTCH_REAL_TO_OUT_CONVERSION (ACCELERATOR_REAL_RANGE/PEDAL_RANGE)
+
 // Six way pins
-#define SIX_WAY_PIN_1 A2
-#define SIX_WAY_PIN_2 A5
-#define SIX_WAY_PIN_3 A1
-#define SIX_WAY_PIN_4 A4
-#define SIX_WAY_PIN_5 A0
-#define SIX_WAY_PIN_6 A3
+#define SIX_WAY_PIN_1 0
+#define SIX_WAY_PIN_2 1
+#define SIX_WAY_PIN_3 2
+#define SIX_WAY_PIN_4 3
+#define SIX_WAY_PIN_5 4
+#define SIX_WAY_PIN_6 5
 
 // Mode switch pins
 #define MODE_PIN_1 10 //Reverse
@@ -31,6 +56,13 @@ enum Buttons{
   IMPULSE_2
 };
 
+int32_t LimitPedal(int value, int32_t min, int32_t max)
+{
+  if(value < min){return min;}
+  if(value > max){return max;}
+  return (int32_t)value;
+}
+
 
 const uint8_t SixWayPins[] = {SIX_WAY_PIN_1, SIX_WAY_PIN_2, SIX_WAY_PIN_3, SIX_WAY_PIN_4, SIX_WAY_PIN_5, SIX_WAY_PIN_6};
 const uint8_t ModePins[] = {MODE_PIN_1, MODE_PIN_2};
@@ -44,6 +76,12 @@ uint8_t prevGearState = 0;
 Joystick_ Joystick;
 
 void setup() {
+
+  // Initalize pedals
+  Joystick.setXAxisRange(PEDAL_MIN_VALUE, PEDAL_MAX_VALUE);
+  Joystick.setYAxisRange(PEDAL_MIN_VALUE, PEDAL_MAX_VALUE);
+  Joystick.setZAxisRange(PEDAL_MIN_VALUE, PEDAL_MAX_VALUE);
+
   // Prepare InputPins
   for(int8_t i = sizeof(SixWayPins); i > -1; i--) {pinMode(SixWayPins[i],INPUT_PULLUP);}
   for(int8_t i = sizeof(ModePins); i > -1; i--)   {pinMode(ModePins[i],INPUT_PULLUP);}
@@ -124,5 +162,28 @@ void loop()
     for(int8_t i = NORMAL_6;i > NORMAL_1-1;i--){Joystick.releaseButton(i);}
     prevGearState = 0;
   }
+
+  //Pedal Handeling
+  int32_t pedal = 0;
+  pedal = analogRead(ACCELERATOR_PIN);
+  pedal = pedal - ACCELERATOR_REAL_MIN_VALUE;
+  pedal = (ACCELERATOR_REAL_TO_OUT_CONVERSION > 0) ? pedal/ACCELERATOR_REAL_TO_OUT_CONVERSION : pedal;
+  pedal = LimitPedal(pedal, PEDAL_MIN_VALUE, PEDAL_MAX_VALUE);
+  Joystick.setXAxis(pedal);
+
+  pedal = 0;
+  pedal = analogRead(BRAKE_PIN);
+  pedal = pedal - BRAKE_REAL_MIN_VALUE;
+  pedal = (BRAKE_REAL_TO_OUT_CONVERSION > 0) ? pedal/BRAKE_REAL_TO_OUT_CONVERSION : pedal;
+  pedal = LimitPedal(pedal, PEDAL_MIN_VALUE, PEDAL_MAX_VALUE);
+  Joystick.setYAxis(pedal);
+
+  pedal = 0;
+  pedal = analogRead(CLUTCH_PIN);
+  pedal = pedal - CLUTCH_REAL_MIN_VALUE;
+  pedal = (CLUTCH_REAL_TO_OUT_CONVERSION > 0) ? pedal/CLUTCH_REAL_TO_OUT_CONVERSION : pedal;
+  pedal = LimitPedal(pedal, PEDAL_MIN_VALUE, PEDAL_MAX_VALUE);
+  Joystick.setZAxis(pedal);
+
   delay(50);
 }
