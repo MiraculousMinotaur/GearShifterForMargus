@@ -1,5 +1,7 @@
 #include <Joystick.h>
 
+#define DEBUG 0
+
 // Pedal Pins
 
 #define ACCELERATOR_PIN A0
@@ -8,22 +10,22 @@
 
 // Pedal Range
 #define PEDAL_MIN_VALUE 0 
-#define PEDAL_MAX_VALUE 255
+#define PEDAL_MAX_VALUE 512
 #define PEDAL_RANGE (PEDAL_MAX_VALUE-PEDAL_MIN_VALUE)
 
 // Pedal Calibration
-#define ACCELERATOR_REAL_MIN_VALUE 0 
-#define ACCELERATOR_REAL_MAX_VALUE 1023
+#define ACCELERATOR_REAL_MIN_VALUE 375 
+#define ACCELERATOR_REAL_MAX_VALUE 775
 #define ACCELERATOR_REAL_RANGE (ACCELERATOR_REAL_MAX_VALUE-ACCELERATOR_REAL_MIN_VALUE)
 #define ACCELERATOR_REAL_TO_OUT_CONVERSION (ACCELERATOR_REAL_RANGE/PEDAL_RANGE)
-#define BRAKE_REAL_MIN_VALUE 0 
-#define BRAKE_REAL_MAX_VALUE 1023
+#define BRAKE_REAL_MIN_VALUE 90 
+#define BRAKE_REAL_MAX_VALUE 700
 #define BRAKE_REAL_RANGE (BRAKE_REAL_MAX_VALUE-BRAKE_REAL_MIN_VALUE)
-#define BRAKE_REAL_TO_OUT_CONVERSION (ACCELERATOR_REAL_RANGE/PEDAL_RANGE)
-#define CLUTCH_REAL_MIN_VALUE 0 
-#define CLUTCH_REAL_MAX_VALUE 1023
+#define BRAKE_REAL_TO_OUT_CONVERSION (BRAKE_REAL_RANGE/PEDAL_RANGE)
+#define CLUTCH_REAL_MIN_VALUE 120 
+#define CLUTCH_REAL_MAX_VALUE 700
 #define CLUTCH_REAL_RANGE (CLUTCH_REAL_MAX_VALUE-CLUTCH_REAL_MIN_VALUE)
-#define CLUTCH_REAL_TO_OUT_CONVERSION (ACCELERATOR_REAL_RANGE/PEDAL_RANGE)
+#define CLUTCH_REAL_TO_OUT_CONVERSION (CLUTCH_REAL_RANGE/PEDAL_RANGE)
 
 // Six way pins
 #define SIX_WAY_PIN_1 0
@@ -76,7 +78,9 @@ uint8_t prevGearState = 0;
 Joystick_ Joystick;
 
 void setup() {
-
+#if DEBUG
+  Serial.begin(9600);
+#endif
   // Initalize pedals
   Joystick.setXAxisRange(PEDAL_MIN_VALUE, PEDAL_MAX_VALUE);
   Joystick.setYAxisRange(PEDAL_MIN_VALUE, PEDAL_MAX_VALUE);
@@ -94,7 +98,7 @@ void setup() {
 void loop() 
 {
   
-  bool inGear = false;
+  /*bool inGear = false;
   bool inMode = false;
   bool inImpulse = false;
 
@@ -162,28 +166,53 @@ void loop()
     for(int8_t i = NORMAL_6;i > NORMAL_1-1;i--){Joystick.releaseButton(i);}
     prevGearState = 0;
   }
-
+*/
   //Pedal Handeling
   int32_t pedal = 0;
   pedal = analogRead(ACCELERATOR_PIN);
+#if DEBUG
+  Serial.print("Axelerator: ");
+  Serial.print(pedal);
+#endif
   pedal = pedal - ACCELERATOR_REAL_MIN_VALUE;
   pedal = (ACCELERATOR_REAL_TO_OUT_CONVERSION > 0) ? pedal/ACCELERATOR_REAL_TO_OUT_CONVERSION : pedal;
   pedal = LimitPedal(pedal, PEDAL_MIN_VALUE, PEDAL_MAX_VALUE);
   Joystick.setXAxis(pedal);
+#if DEBUG
+  Serial.print(" ");
+  Serial.print(pedal);
+#endif
+  
 
   pedal = 0;
   pedal = analogRead(BRAKE_PIN);
+#if DEBUG
+  Serial.print(" Break: ");
+  Serial.print(pedal);
+#endif
   pedal = pedal - BRAKE_REAL_MIN_VALUE;
   pedal = (BRAKE_REAL_TO_OUT_CONVERSION > 0) ? pedal/BRAKE_REAL_TO_OUT_CONVERSION : pedal;
   pedal = LimitPedal(pedal, PEDAL_MIN_VALUE, PEDAL_MAX_VALUE);
   Joystick.setYAxis(pedal);
+#if DEBUG
+  Serial.print(" ");
+  Serial.print(pedal);
+#endif
 
   pedal = 0;
   pedal = analogRead(CLUTCH_PIN);
+#if DEBUG
+  Serial.print(" Clutch: ");
+  Serial.print(pedal);
+#endif
   pedal = pedal - CLUTCH_REAL_MIN_VALUE;
   pedal = (CLUTCH_REAL_TO_OUT_CONVERSION > 0) ? pedal/CLUTCH_REAL_TO_OUT_CONVERSION : pedal;
   pedal = LimitPedal(pedal, PEDAL_MIN_VALUE, PEDAL_MAX_VALUE);
   Joystick.setZAxis(pedal);
+#if DEBUG
+  Serial.print(" ");
+  Serial.println(pedal);
+#endif
 
   delay(50);
 }
