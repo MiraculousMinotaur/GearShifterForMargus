@@ -1,9 +1,11 @@
 #include <Joystick.h>
 
 #define DEBUG 0
+#define PEDALS 1
+#define GEARS 1
 
+#if PEDALS
 // Pedal Pins
-
 #define ACCELERATOR_PIN A0
 #define BRAKE_PIN A1
 #define CLUTCH_PIN A2
@@ -26,7 +28,9 @@
 #define CLUTCH_REAL_MAX_VALUE 700
 #define CLUTCH_REAL_RANGE (CLUTCH_REAL_MAX_VALUE-CLUTCH_REAL_MIN_VALUE)
 #define CLUTCH_REAL_TO_OUT_CONVERSION (CLUTCH_REAL_RANGE/PEDAL_RANGE)
+#endif
 
+#if GEARS
 // Six way pins
 #define SIX_WAY_PIN_1 5
 #define SIX_WAY_PIN_2 A5
@@ -57,15 +61,16 @@ enum Buttons{
   IMPULSE_1,
   IMPULSE_2
 };
-
+#endif
+#if PEDALS
 int32_t LimitPedal(int value, int32_t min, int32_t max)
 {
   if(value < min){return min;}
   if(value > max){return max;}
   return (int32_t)value;
 }
-
-
+#endif
+#if GEARS
 const uint8_t SixWayPins[] = {SIX_WAY_PIN_1, SIX_WAY_PIN_2, SIX_WAY_PIN_3, SIX_WAY_PIN_4, SIX_WAY_PIN_5, SIX_WAY_PIN_6};
 const uint8_t ModePins[] = {MODE_PIN_1, MODE_PIN_2};
 const uint8_t ImpulsePins[] = {LOWER_IMPULSE_PIN, HIGHER_IMPULSE_PIN};
@@ -74,30 +79,32 @@ const uint8_t ImpulsePins[] = {LOWER_IMPULSE_PIN, HIGHER_IMPULSE_PIN};
 uint8_t prevImpulseState = 0;
 uint8_t prevModeState = 0;
 uint8_t prevGearState = 0;
-
+#endif
 Joystick_ Joystick;
 
 void setup() {
 #if DEBUG
   Serial.begin(9600);
 #endif
+#if PEDALS
   // Initalize pedals
   Joystick.setXAxisRange(PEDAL_MIN_VALUE, PEDAL_MAX_VALUE);
   Joystick.setYAxisRange(PEDAL_MIN_VALUE, PEDAL_MAX_VALUE);
   Joystick.setZAxisRange(PEDAL_MIN_VALUE, PEDAL_MAX_VALUE);
-
+#endif
+#if GEARS
   // Prepare InputPins
   for(int8_t i = sizeof(SixWayPins); i > -1; i--) {pinMode(SixWayPins[i],INPUT_PULLUP);}
   for(int8_t i = sizeof(ModePins); i > -1; i--)   {pinMode(ModePins[i],INPUT_PULLUP);}
   for(int8_t i = sizeof(ImpulsePins); i > -1; i--){pinMode(ImpulsePins[i],INPUT_PULLUP);}
-
+#endif
   // Initialize Joystick Library
   Joystick.begin();
 }
 
 void loop() 
 {
-  
+#if GEARS
   bool inGear = false;
   bool inMode = false;
   bool inImpulse = false;
@@ -166,7 +173,8 @@ void loop()
     for(int8_t i = NORMAL_6;i > NORMAL_1-1;i--){Joystick.releaseButton(i);}
     prevGearState = 0;
   }
-
+#endif
+#if PEDALS
   //Pedal Handeling
   int32_t pedal = 0;
   pedal = analogRead(ACCELERATOR_PIN);
@@ -212,6 +220,7 @@ void loop()
 #if DEBUG
   Serial.print(" ");
   Serial.println(pedal);
+#endif
 #endif
 
   delay(50);
