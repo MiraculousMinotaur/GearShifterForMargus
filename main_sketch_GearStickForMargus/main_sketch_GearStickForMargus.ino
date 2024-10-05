@@ -1,11 +1,11 @@
 #include <Joystick.h>
 
 // Six way pins
-#define SIX_WAY_PIN_1 A2
+#define SIX_WAY_PIN_1 5
 #define SIX_WAY_PIN_2 A5
-#define SIX_WAY_PIN_3 A1
+#define SIX_WAY_PIN_3 6
 #define SIX_WAY_PIN_4 A4
-#define SIX_WAY_PIN_5 A0
+#define SIX_WAY_PIN_5 7
 #define SIX_WAY_PIN_6 A3
 
 // Mode switch pins
