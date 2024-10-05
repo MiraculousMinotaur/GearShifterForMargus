@@ -105,7 +105,6 @@ void setup() {
 void loop() 
 {
 #if GEARS
-  bool wasChange = false;
   bool inGear = false;
   bool inMode = false;
   bool inImpulse = false;
@@ -142,7 +141,6 @@ void loop()
       {
         Joystick.pressButton(REVERSE + i-1);
         prevModeState = i;
-        wasChange = true;
       }
       else if(prevModeState != i && digitalRead(ModePins[prevModeState-1])){inMode = false;} // Neutral not detected during gear change
       break;//only read one of the gears
@@ -153,36 +151,30 @@ void loop()
     Joystick.releaseButton(REVERSE);
     Joystick.releaseButton(HIGH_RANGE);
     prevModeState = 0;
+    for(int8_t i = NORMAL_6;i > NORMAL_1-1;i--){Joystick.releaseButton(i);}
   }
-  if(!wasChange)
+
+  //SixWay
+  for(int8_t i = sizeof(SixWayPins); i > 0; i--) 
   {
-    //SixWay
-    for(int8_t i = sizeof(SixWayPins); i > 0; i--) 
+    if(!digitalRead(SixWayPins[i-1]))
     {
-      if(!digitalRead(SixWayPins[i-1]))
+      inGear = true;
+      if(!prevGearState) // gear change can only happen through neutral
       {
-        inGear = true;
-        if(!prevGearState) // gear change can only happen through neutral
-        {
-          Joystick.pressButton(i-1);
-          prevGearState = i;
-          Joystick.releaseButton(REVERSE);
-          Joystick.releaseButton(HIGH_RANGE);
-          prevModeState = 0;
-        }
-        else if(prevGearState != i && digitalRead(SixWayPins[prevGearState-1])){inGear = false;} // Neutral not detected during gear change
-        break;//only read one of the gears
+        Joystick.pressButton(i-1);
+        prevGearState = i;
+        Joystick.releaseButton(REVERSE);
+        Joystick.releaseButton(HIGH_RANGE);
       }
+      else if(prevGearState != i && digitalRead(SixWayPins[prevGearState-1])){inGear = false;} // Neutral not detected during gear change
+      break;//only read one of the gears
     }
-    if(!inGear)
-    {
-      for(int8_t i = NORMAL_6;i > NORMAL_1-1;i--){Joystick.releaseButton(i);}
-      prevGearState = 0;
-    }
-  }else
+  }
+  if(!inGear)
   {
-      for(int8_t i = NORMAL_6;i > NORMAL_1-1;i--){Joystick.releaseButton(i);}
-      prevGearState = 0;
+    for(int8_t i = NORMAL_6;i > NORMAL_1-1;i--){Joystick.releaseButton(i);}
+    prevGearState = 0;
   }
 #endif
 #if PEDALS
