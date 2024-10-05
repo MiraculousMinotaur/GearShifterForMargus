@@ -182,7 +182,7 @@ void loop()
   int32_t pedal = 0;
   pedal = analogRead(ACCELERATOR_PIN);
 #if DEBUG
-  Serial.print("Axelerator: ");
+  Serial.print("Accelerator: ");
   Serial.print(pedal);
 #endif
   pedal = pedal - ACCELERATOR_REAL_MIN_VALUE;
