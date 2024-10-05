@@ -141,6 +141,7 @@ void loop()
       {
         Joystick.pressButton(REVERSE + i-1);
         prevModeState = i;
+        for(int8_t i = NORMAL_6;i > NORMAL_1-1;i--){Joystick.releaseButton(i);}
       }
       else if(prevModeState != i && digitalRead(ModePins[prevModeState-1])){inMode = false;} // Neutral not detected during gear change
       break;//only read one of the gears
@@ -151,7 +152,6 @@ void loop()
     Joystick.releaseButton(REVERSE);
     Joystick.releaseButton(HIGH_RANGE);
     prevModeState = 0;
-    for(int8_t i = NORMAL_6;i > NORMAL_1-1;i--){Joystick.releaseButton(i);}
   }
 
   //SixWay
