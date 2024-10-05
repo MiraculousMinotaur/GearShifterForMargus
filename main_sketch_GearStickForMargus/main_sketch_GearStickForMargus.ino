@@ -28,12 +28,12 @@
 #define CLUTCH_REAL_TO_OUT_CONVERSION (CLUTCH_REAL_RANGE/PEDAL_RANGE)
 
 // Six way pins
-#define SIX_WAY_PIN_1 0
-#define SIX_WAY_PIN_2 1
-#define SIX_WAY_PIN_3 2
-#define SIX_WAY_PIN_4 3
-#define SIX_WAY_PIN_5 4
-#define SIX_WAY_PIN_6 5
+#define SIX_WAY_PIN_1 5
+#define SIX_WAY_PIN_2 A5
+#define SIX_WAY_PIN_3 6
+#define SIX_WAY_PIN_4 A4
+#define SIX_WAY_PIN_5 7
+#define SIX_WAY_PIN_6 A3
 
 // Mode switch pins
 #define MODE_PIN_1 10 //Reverse
@@ -98,7 +98,7 @@ void setup() {
 void loop() 
 {
   
-  /*bool inGear = false;
+  bool inGear = false;
   bool inMode = false;
   bool inImpulse = false;
 
@@ -166,7 +166,7 @@ void loop()
     for(int8_t i = NORMAL_6;i > NORMAL_1-1;i--){Joystick.releaseButton(i);}
     prevGearState = 0;
   }
-*/
+
   //Pedal Handeling
   int32_t pedal = 0;
   pedal = analogRead(ACCELERATOR_PIN);
