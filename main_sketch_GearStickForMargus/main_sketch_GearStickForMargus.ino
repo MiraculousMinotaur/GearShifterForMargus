@@ -1,14 +1,14 @@
 #include <Joystick.h>
 
-#define DEBUG 0
+#define DEBUG 1
 #define PEDALS 1
 #define GEARS 1
 
 #if PEDALS
 // Pedal Pins
-#define ACCELERATOR_PIN A0
-#define BRAKE_PIN A1
-#define CLUTCH_PIN A2
+#define ACCELERATOR_PIN A1 
+#define BRAKE_PIN A2
+#define CLUTCH_PIN A0
 
 // Pedal Range
 #define PEDAL_MIN_VALUE 0 
