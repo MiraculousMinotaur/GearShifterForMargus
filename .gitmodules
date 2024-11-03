@@ -1,6 +1,3 @@
 [submodule "ArduinoJoystickWithFFBLibrary"]
 	path = ArduinoJoystickWithFFBLibrary
 	url = https://github.com/YukMingLaw/ArduinoJoystickWithFFBLibrary.git
-[submodule "digitalWriteFast"]
-	path = digitalWriteFast
-	url = https://github.com/ArminJo/digitalWriteFast.git
