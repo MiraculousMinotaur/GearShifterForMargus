@@ -1,11 +1,15 @@
 #include <Joystick.h>
-#include <digitalWriteFast.h>
-
 //Used Libraries inclued as submodules
 
-#define DEBUG 0
-#define PEDALS 1
-#define GEARS 1
+#define DEBUG 1
+#define PEDALS 0
+#define GEARS 0 //TODO: conflicts with wheel pins for now.
+#define WHEEL 1
+#if WHEEL
+#define FFB 1 // FFB currently only effects steering
+#else
+#define FFB 0
+#endif
 
 #if PEDALS
 // Pedal Pins
@@ -13,26 +17,14 @@
 #define BRAKE_PIN A2
 #define CLUTCH_PIN A0
 
-// Pedal Range
-#define PEDAL_MIN_VALUE 0 
-#define PEDAL_MAX_VALUE 255
-#define PEDAL_RANGE (PEDAL_MAX_VALUE-PEDAL_MIN_VALUE)
-
 // Pedal Calibration
-#define ACCELERATOR_REAL_MIN_VALUE 320
-#define ACCELERATOR_REAL_MAX_VALUE 900
-#define ACCELERATOR_REAL_RANGE (ACCELERATOR_REAL_MAX_VALUE-ACCELERATOR_REAL_MIN_VALUE)
-#define ACCELERATOR_REAL_TO_OUT_CONVERSION (ACCELERATOR_REAL_RANGE/PEDAL_RANGE)
-#define BRAKE_REAL_MIN_VALUE 60
-#define BRAKE_REAL_MAX_VALUE 950
-#define BRAKE_REAL_RANGE (BRAKE_REAL_MAX_VALUE-BRAKE_REAL_MIN_VALUE)
-#define BRAKE_REAL_TO_OUT_CONVERSION (BRAKE_REAL_RANGE/PEDAL_RANGE)
-#define CLUTCH_REAL_MIN_VALUE 90
-#define CLUTCH_REAL_MAX_VALUE 750
-#define CLUTCH_REAL_RANGE (CLUTCH_REAL_MAX_VALUE-CLUTCH_REAL_MIN_VALUE)
-#define CLUTCH_REAL_TO_OUT_CONVERSION (CLUTCH_REAL_RANGE/PEDAL_RANGE)
+#define ACCELERATOR_MIN_VALUE 320
+#define ACCELERATOR_MAX_VALUE 900
+#define BRAKE_MIN_VALUE 60
+#define BRAKE_MAX_VALUE 950
+#define CLUTCH_MIN_VALUE 90
+#define CLUTCH_MAX_VALUE 750
 #endif
-
 #if GEARS
 // Six way pins
 #define SIX_WAY_PIN_1 5
@@ -42,11 +34,11 @@
 #define SIX_WAY_PIN_5 7
 #define SIX_WAY_PIN_6 A3
 
-// Mode switch pins
+// Mode switch Pins
 #define MODE_PIN_1 10 //Reverse
 #define MODE_PIN_2 11 //Low_Range
 
-// Impulse switch pins also works as High/Low for normal mode 
+// Impulse Switch Pins
 #define LOWER_IMPULSE_PIN   9
 #define HIGHER_IMPULSE_PIN 8
 
@@ -62,18 +54,10 @@ enum Buttons{
   REVERSE,
   HIGH_RANGE,
   IMPULSE_1,
-  IMPULSE_2
+  IMPULSE_2,
+  LAST_BUTTON
 };
-#endif
-#if PEDALS
-int32_t LimitPedal(int value, int32_t min, int32_t max)
-{
-  if(value < min){return min;}
-  if(value > max){return max;}
-  return (int32_t)value;
-}
-#endif
-#if GEARS
+
 const uint8_t SixWayPins[] = {SIX_WAY_PIN_1, SIX_WAY_PIN_2, SIX_WAY_PIN_3, SIX_WAY_PIN_4, SIX_WAY_PIN_5, SIX_WAY_PIN_6};
 const uint8_t ModePins[] = {MODE_PIN_1, MODE_PIN_2};
 const uint8_t ImpulsePins[] = {LOWER_IMPULSE_PIN, HIGHER_IMPULSE_PIN};
@@ -82,8 +66,149 @@ const uint8_t ImpulsePins[] = {LOWER_IMPULSE_PIN, HIGHER_IMPULSE_PIN};
 uint8_t prevImpulseState = 0;
 uint8_t prevModeState = 0;
 uint8_t prevGearState = 0;
+
+void handleGear(&bool currentlyActive, uint8_t prevState, &uint8_t pins, size_t pinCount, Buttons firstButton)
+{
+    for(int8_t i = pinCount; i > 0; i--)
+    {
+    if(!digitalRead(pins[i-1]))
+    {
+      currentlyActive* = true;
+      if(!prevState) // gear change can only happen through neutral
+      {
+        Joystick.pressButton(firstButton + i-1);
+        prevState = i;
+      }
+      else if(prevState != i && digitalRead(pins[prevState-1])){currentlyActive* = false;} // Neutral not detected during gear change
+      break;//only read one of the gears
+    }
+  }
+  if(!currentlyActive*)
+  {
+    for(int8_t i = (pinCount + firstButton); i > firstButton-1;i--){Joystick.releaseButton(i);}
+    prevState = 0;
+  }
+}
+
+#else
+    int LAST_BUTTON = 0;
 #endif
-Joystick_ Joystick;
+
+#if WHEEL
+// Encoder Pins
+#define ENCODER_PIN_A 2
+#define ENCODER_PIN_B 3
+// Encoder Limitis
+#define ENCODER_MIN_VALUE -6000 // One Full rotation is 2400
+#define ENCODER_MAX_VALUE 6000
+#if FFB
+// Motor Pins
+#define MOTOR_PIN_A 9
+#define MOTOR_PIN_B 10
+// Motor Limits
+#define MAX_PWM 200 // Going full 255 has higher chance to burn the motor
+#define MAX_FORCES 250 // Testing revealed Force MAX values is 250
+#define PWM_FORCE_CONVERION MAX_PWM/MAX_FORCES // If better feedback granualarity needed in higer forces implement this conversion
+#endif
+
+bool isOutOfRange = false;
+
+volatile int currentPosition = 0;
+volatile int8_t oldState = 0;
+
+// Encoder callback function
+void tick(void)
+{
+  int8_t thisState = 0;
+  thisState |=  digitalRead(ENCODER_PIN_A);
+  thisState |=  digitalRead(ENCODER_PIN_B)<<1;
+
+  switch(thisState)
+  {
+    case 0:
+      currentPosition += (2 == oldState);
+      currentPosition -= (1 == oldState);
+      break;
+    case 1:
+      currentPosition += (0 == oldState);
+      currentPosition -= (3 == oldState);
+      break;
+    case 2:
+      currentPosition += (3 == oldState);
+      currentPosition -= (0 == oldState);
+      break;
+    case 3:
+      currentPosition += (1 == oldState);
+      currentPosition -= (2 == oldState);
+      break;
+    default:
+#if DEBUG && 0
+        Serial.println("ERROR: default");
+    }
+  Serial.println(currentPosition);
+#else
+    break;
+    }
+#endif
+  oldState = thisState;
+}
+#if FFB
+int32_t forces[2]={0};
+Gains gains[2];
+EffectParams effectparams[2];
+#if DEBUG
+  int max_recoded_force = 0;
+  int min_recoded_force = 0;
+#endif
+
+void beginFFBRequestTimer(void)
+{
+  cli();
+  TCCR3A = 0; //set TCCR1A 0
+  TCCR3B = 0; //set TCCR1B 0
+  TCNT3  = 0; //counter init
+  OCR3A = 399;
+  TCCR3B |= (1 << WGM32); //open CTC mode
+  TCCR3B |= (1 << CS31); //set CS11 1(8-fold Prescaler)
+  TIMSK3 |= (1 << OCIE3A);
+  sei();
+}
+
+void setMotor(int force)
+{
+    if(0 > force)
+    {
+        analogWrite(MOTOR_PIN_A, force);
+        analogWrite(MOTOR_PIN_B, 0);
+    }
+    else if (0 < force)
+    {
+        analogWrite(MOTOR_PIN_A, 0);
+        analogWrite(MOTOR_PIN_B, -force);
+    }
+    else
+    {
+        analogWrite(MOTOR_PIN_A, 0);
+        analogWrite(MOTOR_PIN_B, 0);
+    }
+}
+#endif
+#endif
+#if PEDALS || WHEEL || FFB
+template <typename T> T limit(T value, T min, T max)
+{
+  if(value < min){return min;}
+  if(value > max){return max;}
+  return value;
+}
+#endif
+
+Joystick_ Joystick(JOYSTICK_DEFAULT_REPORT_ID,JOYSTICK_TYPE_JOYSTICK,
+  LAST_BUTTON, 0,                  // Button Count, Hat Switch Count
+  true, true, true,     // X and Y, but no Z Axis
+  false, false, false,   //  Rx, Ry, no Rz
+  false, false,          // No rudder or throttle
+  true, true, false);    // No accelerator, brake, or steering
 
 void setup() {
 #if DEBUG
@@ -91,9 +216,9 @@ void setup() {
 #endif
 #if PEDALS
   // Initalize pedals
-  Joystick.setXAxisRange(PEDAL_MIN_VALUE, PEDAL_MAX_VALUE);
-  Joystick.setYAxisRange(PEDAL_MIN_VALUE, PEDAL_MAX_VALUE);
-  Joystick.setZAxisRange(PEDAL_MIN_VALUE, PEDAL_MAX_VALUE);
+  Joystick.setAcceleratorRange(ACCELERATOR_MIN_VALUE, ACCELERATOR_MAX_VALUE);
+  Joystick.setBrakeRange(BRAKE_MIN_VALUE, BRAKE_MAX_VALUE);
+  Joystick.setZAxisRange(CLUTCH_MIN_VALUE, CLUTCH_MAX_VALUE);
 #endif
 #if GEARS
   // Prepare InputPins
@@ -101,110 +226,60 @@ void setup() {
   for(int8_t i = sizeof(ModePins); i > -1; i--)   {pinMode(ModePins[i],INPUT_PULLUP);}
   for(int8_t i = sizeof(ImpulsePins); i > -1; i--){pinMode(ImpulsePins[i],INPUT_PULLUP);}
 #endif
+#if WHEEL
+  pinMode(ENCODER_PIN_A, INPUT_PULLUP);
+  pinMode(ENCODER_PIN_B, INPUT_PULLUP);
+  attachInterrupt(digitalPinToInterrupt(ENCODER_PIN_A),tick,CHANGE);
+  attachInterrupt(digitalPinToInterrupt(ENCODER_PIN_B),tick,CHANGE);
+  Joystick.setXAxisRange(ENCODER_MIN_VALUE, ENCODER_MAX_VALUE);
+#if FFB
+  pinMode(MOTOR_PIN_A, OUTPUT);
+  pinMode(MOTOR_PIN_B, OUTPUT);
+  beginFFBRequestTimer();
+
+  effectparams[0].springMaxPosition = ENCODER_MAX_VALUE;
+  effectparams[0].springPosition = currentPosition;
+  effectparams[1].springMaxPosition = 255;
+  effectparams[1].springPosition = 0;
+
+  Joystick.setGains(gains);
+#endif
+#endif
   // Initialize Joystick Library
-  Joystick.begin();
+  Joystick.begin(true);
 }
+#if FFB
+ISR(TIMER3_COMPA_vect){Joystick.getUSBPID();}
+#endif
 
 void loop() 
 {
-#if GEARS
-  bool inGear = false;
-  bool inMode = false;
-  bool inImpulse = false;
-
-  // Impulse and Low/high Selection
-  for(int8_t i = sizeof(ImpulsePins); i > 0; i--)
-  {
-    if(!digitalRead(ImpulsePins[i-1]))
-    {
-      inImpulse = true;
-      if(!prevImpulseState) // gear change can only happen through neutral
-      {
-        Joystick.pressButton(IMPULSE_1 + i-1);
-        prevImpulseState = i;
-      }
-      else if(prevImpulseState != i && digitalRead(ImpulsePins[prevImpulseState-1])){inImpulse = false;} // Neutral not detected during gear change
-      break;//only read one of the gears
-    }
-  }
-  if(!inImpulse)
-  {
-    Joystick.releaseButton(IMPULSE_1);
-    Joystick.releaseButton(IMPULSE_2);
-    prevImpulseState = 0;
-  }
-
-  // mode Latch Selection
-  for(int8_t i = sizeof(ModePins); i > 0; i--)
-  {
-    if(!digitalRead(ModePins[i-1]))
-    {
-      inMode = true;
-      if(!prevModeState) // gear change can only happen through neutral
-      {
-        Joystick.pressButton(REVERSE + i-1);
-        prevModeState = i;
-      }
-      else if(prevModeState != i && digitalRead(ModePins[prevModeState-1])){inMode = false;} // Neutral not detected during gear change
-      break;//only read one of the gears
-    }
-  }
-  if(!inMode)
-  {
-    Joystick.releaseButton(REVERSE);
-    Joystick.releaseButton(HIGH_RANGE);
-    prevModeState = 0;
-  }
-
-  //SixWay
-  for(int8_t i = sizeof(SixWayPins); i > 0; i--) 
-  {
-    if(!digitalRead(SixWayPins[i-1]))
-    {
-      inGear = true;
-      if(!prevGearState) // gear change can only happen through neutral
-      {
-        Joystick.pressButton(i-1);
-        prevGearState = i;
-      }
-      else if(prevGearState != i && digitalRead(SixWayPins[prevGearState-1])){inGear = false;} // Neutral not detected during gear change
-      break;//only read one of the gears
-    }
-  }
-  if(!inGear)
-  {
-    for(int8_t i = NORMAL_6;i > NORMAL_1-1;i--){Joystick.releaseButton(i);}
-    prevGearState = 0;
-  }
+#if DEBUG
+  delay(100);
 #endif
 #if PEDALS
   //Pedal Handeling
-  int32_t pedal = 0;
+  int pedal = 0;
   pedal = analogRead(ACCELERATOR_PIN);
 #if DEBUG
   Serial.print("Accelerator: ");
   Serial.print(pedal);
 #endif
-  pedal = pedal - ACCELERATOR_REAL_MIN_VALUE;
-  pedal = (ACCELERATOR_REAL_TO_OUT_CONVERSION > 0) ? pedal/ACCELERATOR_REAL_TO_OUT_CONVERSION : pedal;
-  pedal = LimitPedal(pedal, PEDAL_MIN_VALUE, PEDAL_MAX_VALUE);
-  Joystick.setXAxis(pedal);
+  pedal = limit(pedal, ACCELERATOR_MIN_VALUE, ACCELERATOR_MAX_VALUE);
+  Joystick.setAccelerator(pedal);
 #if DEBUG
   Serial.print(" ");
   Serial.print(pedal);
 #endif
   
-
   pedal = 0;
   pedal = analogRead(BRAKE_PIN);
 #if DEBUG
   Serial.print(" Break: ");
   Serial.print(pedal);
 #endif
-  pedal = pedal - BRAKE_REAL_MIN_VALUE;
-  pedal = (BRAKE_REAL_TO_OUT_CONVERSION > 0) ? pedal/BRAKE_REAL_TO_OUT_CONVERSION : pedal;
-  pedal = LimitPedal(pedal, PEDAL_MIN_VALUE, PEDAL_MAX_VALUE);
-  Joystick.setYAxis(pedal);
+  pedal = limit(pedal, BRAKE_MIN_VALUE, BRAKE_MAX_VALUE);
+  Joystick.setBrake(pedal);
 #if DEBUG
   Serial.print(" ");
   Serial.print(pedal);
@@ -216,15 +291,49 @@ void loop()
   Serial.print(" Clutch: ");
   Serial.print(pedal);
 #endif
-  pedal = pedal - CLUTCH_REAL_MIN_VALUE;
-  pedal = (CLUTCH_REAL_TO_OUT_CONVERSION > 0) ? pedal/CLUTCH_REAL_TO_OUT_CONVERSION : pedal;
-  pedal = LimitPedal(pedal, PEDAL_MIN_VALUE, PEDAL_MAX_VALUE);
+  pedal = limit(pedal, CLUTCH_MIN_VALUE, CLUTCH_MAX_VALUE);
   Joystick.setZAxis(pedal);
 #if DEBUG
   Serial.print(" ");
   Serial.println(pedal);
 #endif
 #endif
+#if GEARS
+  bool inImpulse = false;
+  bool inMode = false;
+  bool inGear = false;
+  handleGear(inImpulse, prevImpulseState, ImpulsePins, sizeof(ImpulsePins), IMPULSE_1);
+  handleGear(inMode, prevModeState, ModePins, sizeof(ModePins), REVERSE);
+  handleGear(inGear, prevGearState, SixWayPins, sizeof(SixWayPins), NORMAL_1);
+#endif
+#if WHEEL
+	int wheelOutput = limit(currentPosition, ENCODER_MIN_VALUE, ENCODER_MAX_VALUE);
+#if DEBUG
+  Serial.print("Wheel Output: ");
+  Serial.print(wheelOutput);
+#endif
+  Joystick.setXAxis(wheelOutput);
 
-  delay(50);
+#if FFB
+  effectparams[0].springPosition = wheelOutput;
+  Joystick.setEffectParams(effectparams);
+  Joystick.getForce(forces);
+#if DEBUG
+  if(forces[0] > max_recoded_force){max_recoded_force = forces[0];}
+  if(forces[0] < min_recoded_force){min_recoded_force = forces[0];}
+  Serial.print(" MAX Force: ");
+  Serial.print(max_recoded_force);
+  Serial.print(" MIN Force: ");
+  Serial.print(min_recoded_force);
+  Serial.print(" RAW Force: ");
+  Serial.print(forces[0]);
+#endif
+  int force = limit((int)forces[0], -MAX_PWM, MAX_PWM);
+#if DEBUG
+  Serial.print(" Force: ");
+  Serial.println(force);
+#endif
+  setMotor(force);
+#endif
+#endif
 }
