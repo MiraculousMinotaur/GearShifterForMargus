@@ -167,29 +167,57 @@ void beginFFBRequestTimer(void)
   TCCR3A = 0; //set TCCR1A 0
   TCCR3B = 0; //set TCCR1B 0
   TCNT3  = 0; //counter init
-  OCR3A = 399;
+  OCR3A = 400; // 5KHz with 8-fold prescaler TODO can slow down
   TCCR3B |= (1 << WGM32); //open CTC mode
-  TCCR3B |= (1 << CS31); //set CS11 1(8-fold Prescaler)
-  TIMSK3 |= (1 << OCIE3A);
+  TCCR3B |= (1 << CS31  ); //set CS11 1(8-fold Prescaler)
+  TIMSK3 |= (1 << OCIE3A); //
   sei();
+}
+
+void initPWM(void)
+{
+   // Clear Timer/Counter Control Register A & B
+  TCCR1A = 0;
+  TCCR1B = 0;
+
+  // Table 14-4. Waveform Generation Mode Bit Description. Page 133
+  // Mode:14 - 0 1 1 1 - Fast PWM, 16-bit ICRn TOP
+  TCCR1A |= (1 << WGM11) | (0 << WGM10);
+  TCCR1B |= (1 << WGM13) | (1 << WGM12);
+w
+  // Table 14-5. Clock Select Bit Description. Page 134
+  // 0 0 1 ..   /1 = 15.62 kHz PWM
+  // 0 1 0 ..   /8 =  1.95 kHz
+  // 0 1 1 ..  /64 =    244 Hz
+  // 1 0 0 .. /256 =    61 Hz
+  TCCR1B |= (0 << CS12) | (0 << CS11) | (1 << CS10); // 0 0 1 ... clkIO/1 (No prescaling)
+
+  // Table 15-7. Compare Output Mode, Phase and Frequency Correct PWM Mode. Page 165
+  // COM4A1..0 = 0b10
+  //   Cleared on Compare Match when up-counting.
+  //   Set on Compare Match when down-counting.
+  TCCR1A |= (1 << COM1A1) | (0 << COM1A0);
+  TCCR1A |= (1 << COM1B1) | (0 << COM1B0);
+  ICR1 = 0x2FF; //~21Khz
 }
 
 void setMotor(int force)
 {
+    force *= 3;//scale for PWM
     if(0 > force)
     {
-        analogWrite(MOTOR_PIN_A, force);
-        analogWrite(MOTOR_PIN_B, 0);
+        OCR1B = force;
+        OCR1A = 0;
     }
     else if (0 < force)
     {
-        analogWrite(MOTOR_PIN_A, 0);
-        analogWrite(MOTOR_PIN_B, -force);
+        OCR1B = 0;
+        OCR1A = -force;
     }
     else
     {
-        analogWrite(MOTOR_PIN_A, 0);
-        analogWrite(MOTOR_PIN_B, 0);
+        OCR1B = 0;
+        OCR1A = 0;
     }
 }
 #endif
@@ -236,6 +264,7 @@ void setup() {
   pinMode(MOTOR_PIN_A, OUTPUT);
   pinMode(MOTOR_PIN_B, OUTPUT);
   beginFFBRequestTimer();
+  initPWM();
 
   effectparams[0].springMaxPosition = ENCODER_MAX_VALUE;
   effectparams[0].springPosition = currentPosition;
