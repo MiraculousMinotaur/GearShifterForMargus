@@ -11,6 +11,13 @@
 #define FFB 0
 #endif
 
+#if DEBUG
+#define DEBUG_PRINT(...) Serial.print(__VA_ARGS__)
+#define DEBUG_PRINTLN(...) Serial.println(__VA_ARGS__)
+#else
+#define DEBUG_PRINT(...)
+#define DEBUG_PRINTLN(...)
+#endif
 #if PEDALS
 // Pedal Pins
 #define ACCELERATOR_PIN A1 
@@ -142,14 +149,9 @@ void tick(void)
       currentPosition -= (2 == oldState);
       break;
     default:
-#if DEBUG && 0
-        Serial.println("ERROR: default");
+        DEBUG_PRINTLN("ERROR: default");
     }
-  Serial.println(currentPosition);
-#else
-    break;
-    }
-#endif
+  DEBUG_PRINTLN(currentPosition);
   oldState = thisState;
 }
 #if FFB
@@ -184,7 +186,7 @@ void initPWM(void)
   // Mode:14 - 0 1 1 1 - Fast PWM, 16-bit ICRn TOP
   TCCR1A |= (1 << WGM11) | (0 << WGM10);
   TCCR1B |= (1 << WGM13) | (1 << WGM12);
-w
+
   // Table 14-5. Clock Select Bit Description. Page 134
   // 0 0 1 ..   /1 = 15.62 kHz PWM
   // 0 1 0 ..   /8 =  1.95 kHz
@@ -290,42 +292,32 @@ void loop()
   //Pedal Handeling
   int pedal = 0;
   pedal = analogRead(ACCELERATOR_PIN);
-#if DEBUG
-  Serial.print("Accelerator: ");
-  Serial.print(pedal);
-#endif
+  DEBUG_PRINT("Accelerator: ");
+  DEBUG_PRINT(pedal);
   pedal = limit(pedal, ACCELERATOR_MIN_VALUE, ACCELERATOR_MAX_VALUE);
   Joystick.setAccelerator(pedal);
-#if DEBUG
-  Serial.print(" ");
-  Serial.print(pedal);
-#endif
+  DEBUG_PRINT(" ");
+  DEBUG_PRINT(pedal);
   
   pedal = 0;
   pedal = analogRead(BRAKE_PIN);
-#if DEBUG
-  Serial.print(" Break: ");
-  Serial.print(pedal);
-#endif
+  DEBUG_PRINT(" Break: ");
+  DEBUG_PRINT(pedal);
+
   pedal = limit(pedal, BRAKE_MIN_VALUE, BRAKE_MAX_VALUE);
   Joystick.setBrake(pedal);
-#if DEBUG
-  Serial.print(" ");
-  Serial.print(pedal);
-#endif
+  DEBUG_PRINT(" ");
+  DEBUG_PRINT(pedal);
 
   pedal = 0;
   pedal = analogRead(CLUTCH_PIN);
-#if DEBUG
-  Serial.print(" Clutch: ");
-  Serial.print(pedal);
-#endif
+  DEBUG_PRINT(" Clutch: ");
+  DEBUG_PRINT(pedal);
+
   pedal = limit(pedal, CLUTCH_MIN_VALUE, CLUTCH_MAX_VALUE);
   Joystick.setZAxis(pedal);
-#if DEBUG
-  Serial.print(" ");
-  Serial.println(pedal);
-#endif
+  DEBUG_PRINT(" ");
+  DEBUG_PRINTLN(pedal);
 #endif
 #if GEARS
   bool inImpulse = false;
@@ -337,10 +329,8 @@ void loop()
 #endif
 #if WHEEL
 	int wheelOutput = limit(currentPosition, ENCODER_MIN_VALUE, ENCODER_MAX_VALUE);
-#if DEBUG
-  Serial.print("Wheel Output: ");
-  Serial.print(wheelOutput);
-#endif
+  DEBUG_PRINT("Wheel Output: ");
+  DEBUG_PRINT(wheelOutput);
   Joystick.setXAxis(wheelOutput);
 
 #if FFB
@@ -350,18 +340,16 @@ void loop()
 #if DEBUG
   if(forces[0] > max_recoded_force){max_recoded_force = forces[0];}
   if(forces[0] < min_recoded_force){min_recoded_force = forces[0];}
-  Serial.print(" MAX Force: ");
-  Serial.print(max_recoded_force);
-  Serial.print(" MIN Force: ");
-  Serial.print(min_recoded_force);
-  Serial.print(" RAW Force: ");
-  Serial.print(forces[0]);
+  DEBUG_PRINT(" MAX Force: ");
+  DEBUG_PRINT(max_recoded_force);
+  DEBUG_PRINT(" MIN Force: ");
+  DEBUG_PRINT(min_recoded_force);
+  DEBUG_PRINT(" RAW Force: ");
+  DEBUG_PRINT(forces[0]);
 #endif
   int force = limit((int)forces[0], -MAX_PWM, MAX_PWM);
-#if DEBUG
-  Serial.print(" Force: ");
-  Serial.println(force);
-#endif
+  DEBUG_PRINT(" Force: ");
+  DEBUG_PRINTLN(force);
   setMotor(force);
 #endif
 #endif
