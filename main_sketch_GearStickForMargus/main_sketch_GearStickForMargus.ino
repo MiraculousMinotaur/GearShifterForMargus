@@ -222,6 +222,13 @@ void setMotor(int force)
         OCR1A = 0;
     }
 }
+
+void selfCenter(int wheelOutput)
+{
+  if(wheelOutput > 0){setMotor(50);}
+  else if(wheelOutput < 0){setMotor(-50);}
+  else{setMotor(0);}
+}
 #endif
 #endif
 #if PEDALS || WHEEL || FFB
@@ -351,6 +358,7 @@ void loop()
   DEBUG_PRINT(" Force: ");
   DEBUG_PRINTLN(force);
   setMotor(force);
+  selfCenter(wheelOutput);
 #endif
 #endif
 }
