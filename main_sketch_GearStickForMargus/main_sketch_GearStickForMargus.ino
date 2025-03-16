@@ -358,7 +358,7 @@ void loop()
   DEBUG_PRINT(" Force: ");
   DEBUG_PRINTLN(force);
   setMotor(force);
-  selfCenter(wheelOutput);
+  //selfCenter(wheelOutput);
 #endif
 #endif
 }
