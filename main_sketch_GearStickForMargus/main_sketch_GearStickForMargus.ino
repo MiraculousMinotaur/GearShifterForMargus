@@ -263,7 +263,7 @@ void initPWM(void)
   TCCR1A |= (1 << COM1B1) | (0 << COM1B0);
   TIMSK1 |= (1 << OCIE1B);
   ICR1 = MAX_PWM;
-  OCR1A = MAX_PWM/2;
+  OCR1A = MAX_PWM/2; // Debug PWM
   OCR1B = MAX_PWM;
 }
 
@@ -282,14 +282,12 @@ void setFeedback(int force)
       else if(force > -MAX_PWM-1){feedback = 3;}
     }
     else{feedback = 0;}
-    if(abs(force) < 25){digitalWrite(STEPPER_PIN_ENABLE, HIGH);}
-    else {digitalWrite(STEPPER_PIN_ENABLE, LOW);}
 }
 
 void selfCenter(int wheelOutput)
 {
-  if(wheelOutput > 10){setFeedback(100);}
-  else if(wheelOutput < -10){setFeedback(-100);}
+  if(wheelOutput > 100){setFeedback(100);}
+  else if(wheelOutput < -100){setFeedback(-100);}
   else{setFeedback(0);}
 }
 #endif
@@ -310,7 +308,8 @@ Joystick_ Joystick(JOYSTICK_DEFAULT_REPORT_ID,JOYSTICK_TYPE_JOYSTICK,
   false, false,          // No rudder or throttle
   false, false, false);    // No accelerator, brake, or steering
 
-void setup() {
+void setup()
+{
 #if DEBUG
   Serial.begin(9600);
 #endif
@@ -355,7 +354,18 @@ void setup() {
 }
 #if FFB
 ISR(TIMER3_COMPA_vect){Joystick.getUSBPID();}
-ISR(TIMER1_COMPB_vect){takeStep();}
+ISR(TIMER1_COMPB_vect)
+{
+  takeStep();
+  static int manualCounter = 0;
+  if(!(manualCounter%100))
+  {
+    if(abs(GlobalForce)*2 > manualCounter){digitalWrite(STEPPER_PIN_ENABLE, LOW);}
+    else {digitalWrite(STEPPER_PIN_ENABLE, HIGH);}
+  }
+  manualCounter = manualCounter%500;
+  manualCounter++;
+}
 #endif
 
 void loop() 
