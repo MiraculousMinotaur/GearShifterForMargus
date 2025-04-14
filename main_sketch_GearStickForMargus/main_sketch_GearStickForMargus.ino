@@ -51,7 +51,7 @@
 
 #define MAIN_STICK_SIZE 6
 
-enum Buttons{
+enum Buttons <int> {
   NORMAL_1 = 0,
   NORMAL_2,
   NORMAL_3,
