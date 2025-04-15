@@ -185,35 +185,34 @@ void tick(void)
 {
   hasMoved = true;
   int8_t thisState = 0;
-  static int8_t oldState = 0;
+  static int8_t oldState = 0, shouldStep = 0;
+  bool placeHolder = false;
   thisState |=  digitalRead(ENCODER_PIN_A);
   thisState |=  digitalRead(ENCODER_PIN_B)<<1;
 
   switch(thisState)
   {
     case 0:
-      currentPosition += (2 == oldState);
-      currentPosition -= (1 == oldState);
+      placeHolder = (2 == oldState)-(1 == oldState);
       break;
     case 1:
-      currentPosition += (0 == oldState);
-      currentPosition -= (3 == oldState);
+      placeHolder = (0 == oldState)-(3 == oldState);
       break;
     case 2:
-      currentPosition += (3 == oldState);
-      currentPosition -= (0 == oldState);
+      placeHolder = (3 == oldState)-(0 == oldState);
       break;
     case 3:
-      currentPosition += (1 == oldState);
-      currentPosition -= (2 == oldState);
+      placeHolder = (1 == oldState)-(2 == oldState);
       break;
     default:
         DEBUG_PRINTLN("ERROR: default");
     }
+    currentPosition += placeHolder;
+    shouldStep += placeHolder;
   //DEBUG_PRINTLN(currentPosition);
   oldState = thisState;
 #if FFB
-  calculateStep();
+  if(shouldStep == STEP_SIZE || shouldStep == -STEP_SIZE){shouldStep = 0; calculateStep();}
 #endif
 }
 #if FFB
