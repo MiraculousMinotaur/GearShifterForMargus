@@ -11,6 +11,15 @@
 #define FFB 0
 #endif
 
+#if PEDALS || WHEEL || FFB
+template <typename T> T limit(T value, T min, T max)
+{
+  if(value < min){return min;}
+  if(value > max){return max;}
+  return value;
+}
+#endif
+
 #if DEBUG
 #define DEBUG_PRINT(...) Serial.print(__VA_ARGS__)
 #define DEBUG_PRINTLN(...) Serial.println(__VA_ARGS__)
@@ -110,6 +119,7 @@ const int16_t ENCODER_MIN_VALUE = -6000; // One Full rotation is 2400
 const int16_t ENCODER_MAX_VALUE =  6000;
 
 bool isOutOfRange = false;
+bool hasMoved = false;
 
 volatile int currentPosition = (ENCODER_MIN_VALUE + ENCODER_MAX_VALUE)/2;
 
@@ -123,59 +133,57 @@ const int STEPPER_PIN_DIR = 6;
 const int STEPPER_PIN_ENABLE = 8;
 
 // Motor Limits
-const int16_t MAX_PWM  = 0xFF;
+const int16_t MAX_PWM = 0x0FFF;
+const int16_t MIN_PWM = 0X00FF;
 const int16_t MAX_FORCES  = 250; // Testing revealed Force MAX values is 250
 const int16_t PWM_FORCE_CONVERION = MAX_PWM/MAX_FORCES; // If better feedback granualarity needed in higer forces implement this conversion
 
 volatile int stepperPosition = currentPosition;
-int GlobalForce = 0;
-int feedback = 0;
-const int STEP_SIZE = 3;
+int16_t globalForce = 0;
+int8_t integralError = 0;
+int8_t feedback = 0;
+const uint8_t STEP_SIZE = 3;
+const uint8_t REAL_STEP = 12;
+const int FEEDBACK_CALIBRATION = (MAX_FORCES/(REAL_STEP));
 
-inline void takeStepLeft(void)
+inline void takeStep(uint8_t right)
 {
-  DEBUG_PRINTLN("STEP_LEFT");
-    digitalWrite(STEPPER_PIN_DIR, LOW);
-    digitalWrite(STEPPER_PIN_PULSE, LOW);
-    digitalWrite(STEPPER_PIN_PULSE, HIGH);
-}
-inline void takeStepRight(void)
-{
-  DEBUG_PRINTLN("STEP_RIGHT");
-    digitalWrite(STEPPER_PIN_DIR, HIGH);
+  /*DEBUG_PRINT("STEP ");
+  DEBUG_PRINTLN(right);*/
+    digitalWrite(STEPPER_PIN_DIR, right);
     digitalWrite(STEPPER_PIN_PULSE, LOW);
     digitalWrite(STEPPER_PIN_PULSE, HIGH);
 }
 
-void takeStep(void)
+void calculateStep(void)
 { 
-  int toStep = stepperPosition - currentPosition;
+  int16_t toStep = stepperPosition - currentPosition;
   toStep -= feedback;
- /* DEBUG_PRINT("feedback: ");
-  DEBUG_PRINT(feedback);
-  DEBUG_PRINT(" toStep: ");
-  DEBUG_PRINT(toStep);
-  DEBUG_PRINT(" currentPosition: ");
-  DEBUG_PRINT(currentPosition);
-  DEBUG_PRINT(" stepperPosition: ");
-  DEBUG_PRINTLN(stepperPosition);*/
-  if(toStep > STEP_SIZE-1)
-  {
-    takeStepRight();
+  toStep += integralError;
+  //isOutOfRange
+  if(toStep > (globalForce > 0?2*STEP_SIZE-1:REAL_STEP))
+  { 
+    //DEBUG_PRINTLN("right");
+    //digitalWrite(STEPPER_PIN_ENABLE, globalForce > 0);
+    takeStep(HIGH);
     stepperPosition -= STEP_SIZE;
   }
-  else if(toStep < -(STEP_SIZE-1))
+  else if(toStep < -((globalForce < 0?2*STEP_SIZE-1:REAL_STEP)))
   {
-    takeStepLeft();
+    //DEBUG_PRINTLN("left");
+    //digitalWrite(STEPPER_PIN_ENABLE, globalForce < 0);
+    takeStep(LOW);
     stepperPosition += STEP_SIZE;
   }
 }
+
 
 #endif
 
 // Encoder callback function
 void tick(void)
 {
+  hasMoved = true;
   int8_t thisState = 0;
   static int8_t oldState = 0;
   thisState |=  digitalRead(ENCODER_PIN_A);
@@ -205,7 +213,7 @@ void tick(void)
   //DEBUG_PRINTLN(currentPosition);
   oldState = thisState;
 #if FFB
-  if(!isOutOfRange){takeStep();}
+  calculateStep();
 #endif
 }
 #if FFB
@@ -259,50 +267,22 @@ void initPWM(void)
   TCCR1A |= (1 << COM1B1) | (0 << COM1B0);
   TIMSK1 |= (1 << OCIE1B);
   ICR1 = MAX_PWM;
-  OCR1A = MAX_PWM/5; // Debug PWM
-  OCR1B = MAX_PWM;
+  //OCR1A = 0; // Debug PWM
+  OCR1B = 1; //ISR 
 }
 
 void setFeedback(int force)
 {
-    if(force > 0)
-    {
-      if(force < 50){feedback = 1;}
-      else if(force < 100){feedback = 2;}
-      else if(force < 150){feedback = 3;}
-      else if(force < 200){feedback = 4;}
-      else if(force < MAX_PWM+1){feedback = 5;}
-    }
-    else if(force < 0)
-    {
-      if (force > -50){feedback = -1;}
-      else if(force > -100){feedback = -2;}
-      else if(force > -150){feedback = -3;}
-      else if(force > -200){feedback = -4;}
-      else if(force > -MAX_PWM-1){feedback = -5;}
-    }
-    else{feedback = 0;}
-    /*if(abs(force) < 25){digitalWrite(STEPPER_PIN_ENABLE, HIGH);}
-    else{digitalWrite(STEPPER_PIN_ENABLE, LOW);}*/
+    feedback = force/FEEDBACK_CALIBRATION;
+    //ICR1 = (MAX_PWM - (abs(force)*PWM_FORCE_CONVERION)) + MIN_PWM;
 }
 
 void selfCenter(int wheelOutput)
 {
-  if(wheelOutput > 1000){setFeedback(-150);}
-  else if(wheelOutput >100){setFeedback(-25);}
-  else if(wheelOutput < -100){setFeedback(25);}
-  else if(wheelOutput < -1000){setFeedback(150);}
-  else{setFeedback(0);}
+  if (abs(wheelOutput) < 10){globalForce = 0;}
+  else if(wheelOutput){globalForce = limit(-wheelOutput, -MAX_FORCES, MAX_FORCES);}
 }
 #endif
-#endif
-#if PEDALS || WHEEL || FFB
-template <typename T> T limit(T value, T min, T max)
-{
-  if(value < min){return min;}
-  if(value > max){return max;}
-  return value;
-}
 #endif
 
 Joystick_ Joystick(JOYSTICK_DEFAULT_REPORT_ID,JOYSTICK_TYPE_JOYSTICK,
@@ -312,7 +292,7 @@ Joystick_ Joystick(JOYSTICK_DEFAULT_REPORT_ID,JOYSTICK_TYPE_JOYSTICK,
   false, false,          // No rudder or throttle
   false, false, false);    // No accelerator, brake, or steering
 
-void setup()
+void setup(void)
 {
 #if DEBUG
   Serial.begin(115200);
@@ -338,12 +318,14 @@ void setup()
   Joystick.setRxAxisRange(ENCODER_MIN_VALUE, ENCODER_MAX_VALUE);
   Joystick.setSteeringRange(ENCODER_MIN_VALUE, ENCODER_MAX_VALUE);
 #if FFB
+
   pinMode(STEPPER_PIN_PULSE, OUTPUT);
   pinMode(STEPPER_PIN_DIR, OUTPUT);
+
   pinMode(STEPPER_PIN_ENABLE, OUTPUT);
   pinMode(9, OUTPUT);
   beginFFBRequestTimer();
-  //initPWM();
+  initPWM();
   digitalWrite(STEPPER_PIN_ENABLE, LOW);
   effectparams[0].springMaxPosition = ENCODER_MAX_VALUE;
   effectparams[0].springPosition = currentPosition;
@@ -351,14 +333,34 @@ void setup()
   effectparams[1].springPosition = 0;
 
   Joystick.setGains(gains);
+  currentPosition = 0;
+  stepperPosition = 0;
 #endif
 #endif
   // Initialize Joystick Library
   Joystick.begin(true);
 }
 #if FFB
+const int stationary_max = 2;
 ISR(TIMER3_COMPA_vect){Joystick.getUSBPID();selfCenter(currentPosition);}
-//ISR(TIMER1_COMPB_vect){return;}
+ISR(TIMER1_COMPB_vect)
+{
+  static int isStationary = stationary_max;
+  if(!hasMoved)
+  {
+    if(--isStationary < 1)
+    {
+      integralError -= (globalForce>0);
+      integralError += (globalForce<0);
+      isStationary=stationary_max;
+    }
+    calculateStep();
+  }
+  else{isStationary = stationary_max; integralError = 0;}
+  //calculateStep();
+  hasMoved = false;
+  return;
+}
 #endif
 
 void loop() 
@@ -409,8 +411,15 @@ void loop()
 	int wheelOutput = limit(currentPosition, ENCODER_MIN_VALUE, ENCODER_MAX_VALUE);
   if(abs(wheelOutput) == ENCODER_MAX_VALUE){isOutOfRange = true;}
   else{isOutOfRange = false;}
-  DEBUG_PRINT("Wheel Output: ");
-  DEBUG_PRINTLN(wheelOutput);
+  DEBUG_PRINT("currentPosition: ");
+  DEBUG_PRINT(currentPosition);
+  DEBUG_PRINT(" Wheel Output: ");
+  DEBUG_PRINT(wheelOutput);
+  DEBUG_PRINT(" Feedback ");
+  DEBUG_PRINT(feedback);
+  DEBUG_PRINT(" StepperPosition: ");
+  DEBUG_PRINT(stepperPosition);
+  
   Joystick.setXAxis(wheelOutput);
 
 #if FFB
@@ -427,10 +436,10 @@ void loop()
   DEBUG_PRINT(" RAW Force: ");
   DEBUG_PRINT(forces[0]);*/
 #endif
-  GlobalForce = limit((int)forces[0], -MAX_PWM, MAX_PWM);
-  //DEBUG_PRINT(" Force: ");
-  //DEBUG_PRINTLN(GlobalForce);
-  //setFeedback(GlobalForce);
+  //globalForce = limit((int)forces[0], -MAX_PWM, MAX_PWM);
+  DEBUG_PRINT(" Force: ");
+  DEBUG_PRINTLN(globalForce);
+  setFeedback(globalForce);
   
 #endif
 #endif
