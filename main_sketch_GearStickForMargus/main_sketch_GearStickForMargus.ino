@@ -140,7 +140,7 @@ const int16_t PWM_FORCE_CONVERION = MAX_PWM/MAX_FORCES; // If better feedback gr
 
 volatile int stepperPosition = currentPosition;
 int16_t globalForce = 0;
-int8_t integralError = 0;
+int16_t integralError = 0;
 int8_t feedback = 0;
 const uint8_t STEP_SIZE = 3;
 const uint8_t REAL_STEP = 12;
@@ -157,10 +157,20 @@ inline void takeStep(uint8_t right)
 
 void calculateStep(void)
 { 
-  int16_t toStep = stepperPosition - currentPosition;
-  //toStep -= feedback;
-  //toStep += integralError;
-  if(toStep > (globalForce > 0?STEP_SIZE-1:REAL_STEP-1))
+  int16_t toStep = currentPosition - stepperPosition;
+  toStep += feedback;
+  toStep += integralError;
+  DEBUG_PRINT("currentPosition: ");
+  DEBUG_PRINT(currentPosition);
+  DEBUG_PRINT(" StepperPosition: ");
+  DEBUG_PRINT(stepperPosition);
+  DEBUG_PRINT(" Feedback ");
+  DEBUG_PRINT(feedback);
+  DEBUG_PRINT(" toStep ");
+  DEBUG_PRINT(toStep);
+  DEBUG_PRINT(" Force: ");
+  DEBUG_PRINTLN(globalForce);
+  if(toStep < -(globalForce > 0?REAL_STEP:STEP_SIZE))
   { 
     //DEBUG_PRINTLN("right");
     //digitalWrite(STEPPER_PIN_ENABLE, globalForce > 0);
@@ -170,7 +180,7 @@ void calculateStep(void)
       stepperPosition -= STEP_SIZE;
     }
   }
-  else if(toStep < -((globalForce < 0?STEP_SIZE-1:REAL_STEP)))
+  else if(toStep > ((globalForce < 0?REAL_STEP:STEP_SIZE)))
   {
     //DEBUG_PRINTLN("left");
     //digitalWrite(STEPPER_PIN_ENABLE, globalForce < 0);
@@ -282,7 +292,7 @@ void setFeedback(int force)
 
 void selfCenter(int wheelOutput)
 {
-  if (abs(wheelOutput) < 10){globalForce = 0;}
+  if (abs(wheelOutput) < REAL_STEP){globalForce = 0;}
   else if(wheelOutput){globalForce = limit(-wheelOutput, -MAX_FORCES, MAX_FORCES);}
 }
 #endif
@@ -344,17 +354,18 @@ void setup(void)
   Joystick.begin(true);
 }
 #if FFB
-const int stationary_max = 2;
+const int stationary_max = 100;
 ISR(TIMER3_COMPA_vect){Joystick.getUSBPID();selfCenter(currentPosition);}
 ISR(TIMER1_COMPB_vect)
 {
+  if (abs(currentPosition) < REAL_STEP){digitalWrite(STEPPER_PIN_ENABLE, HIGH);}//stepperPosition = currentPosition}
+  else{digitalWrite(STEPPER_PIN_ENABLE, LOW);}
   static int isStationary = stationary_max;
   if(!hasMoved)
   {
     if(--isStationary < 1)
     {
-      integralError -= (globalForce>0);
-      integralError += (globalForce<0);
+      integralError += (globalForce>0)-(globalForce<0);
       isStationary=stationary_max;
     }
     calculateStep();
@@ -412,14 +423,14 @@ void loop()
 #endif
 #if WHEEL
 	int wheelOutput = limit(currentPosition, ENCODER_MIN_VALUE, ENCODER_MAX_VALUE);
-  DEBUG_PRINT("currentPosition: ");
+  /*DEBUG_PRINT("currentPosition: ");
   DEBUG_PRINT(currentPosition);
   DEBUG_PRINT(" Wheel Output: ");
   DEBUG_PRINT(wheelOutput);
   DEBUG_PRINT(" Feedback ");
   DEBUG_PRINT(feedback);
   DEBUG_PRINT(" StepperPosition: ");
-  DEBUG_PRINT(stepperPosition);
+  DEBUG_PRINT(stepperPosition);*/
   
   Joystick.setXAxis(wheelOutput);
 
@@ -438,8 +449,8 @@ void loop()
   DEBUG_PRINT(forces[0]);*/
 #endif
   //globalForce = limit((int)forces[0], -MAX_PWM, MAX_PWM);
-  DEBUG_PRINT(" Force: ");
-  DEBUG_PRINTLN(globalForce);
+  /*DEBUG_PRINT(" Force: ");
+  DEBUG_PRINTLN(globalForce);*/
   setFeedback(globalForce);
   
 #endif
