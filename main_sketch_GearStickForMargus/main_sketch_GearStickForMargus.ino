@@ -184,9 +184,8 @@ void calculateStep(void)
 void tick(void)
 {
   hasMoved = true;
-  int8_t thisState = 0;
+  int8_t thisState = 0, placeHolder = 0;;
   static int8_t oldState = 0, shouldStep = 0;
-  bool placeHolder = false;
   thisState |=  digitalRead(ENCODER_PIN_A);
   thisState |=  digitalRead(ENCODER_PIN_B)<<1;
 
