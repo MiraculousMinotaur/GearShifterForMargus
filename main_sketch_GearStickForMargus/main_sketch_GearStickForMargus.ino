@@ -144,7 +144,7 @@ int8_t integralError = 0;
 int8_t feedback = 0;
 const uint8_t STEP_SIZE = 3;
 const uint8_t REAL_STEP = 12;
-const int FEEDBACK_CALIBRATION = (MAX_FORCES/(REAL_STEP));
+const int FEEDBACK_CALIBRATION = (MAX_FORCES/(STEP_SIZE));
 
 inline void takeStep(uint8_t right)
 {
@@ -158,22 +158,27 @@ inline void takeStep(uint8_t right)
 void calculateStep(void)
 { 
   int16_t toStep = stepperPosition - currentPosition;
-  toStep -= feedback;
-  toStep += integralError;
-  //isOutOfRange
-  if(toStep > (globalForce > 0?2*STEP_SIZE-1:REAL_STEP))
+  //toStep -= feedback;
+  //toStep += integralError;
+  if(toStep > (globalForce > 0?STEP_SIZE-1:REAL_STEP-1))
   { 
     //DEBUG_PRINTLN("right");
     //digitalWrite(STEPPER_PIN_ENABLE, globalForce > 0);
-    takeStep(HIGH);
-    stepperPosition -= STEP_SIZE;
+    if(currentPosition > ENCODER_MIN_VALUE)
+    {
+      takeStep(HIGH);
+      stepperPosition -= STEP_SIZE;
+    }
   }
-  else if(toStep < -((globalForce < 0?2*STEP_SIZE-1:REAL_STEP)))
+  else if(toStep < -((globalForce < 0?STEP_SIZE-1:REAL_STEP)))
   {
     //DEBUG_PRINTLN("left");
     //digitalWrite(STEPPER_PIN_ENABLE, globalForce < 0);
-    takeStep(LOW);
-    stepperPosition += STEP_SIZE;
+    if(currentPosition < ENCODER_MAX_VALUE)
+    {
+      takeStep(LOW);
+      stepperPosition += STEP_SIZE;
+    }
   }
 }
 
@@ -407,8 +412,6 @@ void loop()
 #endif
 #if WHEEL
 	int wheelOutput = limit(currentPosition, ENCODER_MIN_VALUE, ENCODER_MAX_VALUE);
-  if(abs(wheelOutput) == ENCODER_MAX_VALUE){isOutOfRange = true;}
-  else{isOutOfRange = false;}
   DEBUG_PRINT("currentPosition: ");
   DEBUG_PRINT(currentPosition);
   DEBUG_PRINT(" Wheel Output: ");
