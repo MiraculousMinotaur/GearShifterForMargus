@@ -160,7 +160,7 @@ void calculateStep(void)
   int16_t toStep = currentPosition - stepperPosition;
   toStep += feedback;
   toStep += integralError;
-  DEBUG_PRINT("currentPosition: ");
+  /*DEBUG_PRINT("currentPosition: ");
   DEBUG_PRINT(currentPosition);
   DEBUG_PRINT(" StepperPosition: ");
   DEBUG_PRINT(stepperPosition);
@@ -169,15 +169,15 @@ void calculateStep(void)
   DEBUG_PRINT(" toStep ");
   DEBUG_PRINT(toStep);
   DEBUG_PRINT(" Force: ");
-  DEBUG_PRINTLN(globalForce);
+  DEBUG_PRINTLN(globalForce)*/;
   if(toStep < -(globalForce > 0?REAL_STEP:STEP_SIZE))
   { 
     //DEBUG_PRINTLN("right");
     //digitalWrite(STEPPER_PIN_ENABLE, globalForce > 0);
-    if(currentPosition > ENCODER_MIN_VALUE)
+    if(currentPosition > ENCODER_MIN_VALUE) // is out of bounds going in right direction ?
     {
-      takeStep(HIGH);
       stepperPosition -= STEP_SIZE;
+      takeStep(HIGH);
     }
   }
   else if(toStep > ((globalForce < 0?REAL_STEP:STEP_SIZE)))
@@ -186,8 +186,8 @@ void calculateStep(void)
     //digitalWrite(STEPPER_PIN_ENABLE, globalForce < 0);
     if(currentPosition < ENCODER_MAX_VALUE)
     {
-      takeStep(LOW);
       stepperPosition += STEP_SIZE;
+      takeStep(LOW);
     }
   }
 }
@@ -354,7 +354,7 @@ void setup(void)
   Joystick.begin(true);
 }
 #if FFB
-const int stationary_max = 100;
+const int stationary_max = 2;
 ISR(TIMER3_COMPA_vect){Joystick.getUSBPID();selfCenter(currentPosition);}
 ISR(TIMER1_COMPB_vect)
 {
@@ -423,14 +423,14 @@ void loop()
 #endif
 #if WHEEL
 	int wheelOutput = limit(currentPosition, ENCODER_MIN_VALUE, ENCODER_MAX_VALUE);
-  /*DEBUG_PRINT("currentPosition: ");
+  DEBUG_PRINT("currentPosition: ");
   DEBUG_PRINT(currentPosition);
   DEBUG_PRINT(" Wheel Output: ");
   DEBUG_PRINT(wheelOutput);
   DEBUG_PRINT(" Feedback ");
   DEBUG_PRINT(feedback);
   DEBUG_PRINT(" StepperPosition: ");
-  DEBUG_PRINT(stepperPosition);*/
+  DEBUG_PRINT(stepperPosition);
   
   Joystick.setXAxis(wheelOutput);
 
@@ -449,8 +449,8 @@ void loop()
   DEBUG_PRINT(forces[0]);*/
 #endif
   //globalForce = limit((int)forces[0], -MAX_PWM, MAX_PWM);
-  /*DEBUG_PRINT(" Force: ");
-  DEBUG_PRINTLN(globalForce);*/
+  DEBUG_PRINT(" Force: ");
+  DEBUG_PRINTLN(globalForce);
   setFeedback(globalForce);
   
 #endif
