@@ -227,6 +227,7 @@ void tick(void)
   oldState = thisState;
 #if FFB
   if(shouldStep == STEP_SIZE || shouldStep == -STEP_SIZE){shouldStep = 0; calculateStep();}
+  //if(!isOutOfRange){takeStep();}
 #endif
 }
 #if FFB
@@ -263,7 +264,7 @@ void initPWM(void)
   // Mode:14 - 1 1 1 0 - Fast PWM, 16-bit ICRn TOP
   // Table 14-3 Waveform is set LOW on Compare
   TCCR1A |= (1 << WGM11) | (0 << WGM10);
-  TCCR1B |= (1 << WGM13) | (0 << WGM12);
+  TCCR1B |= (1 << WGM13) | (1 << WGM12);
 
   // Table 14-5. Clock Select Bit Description. Page 134
   // 0 0 1 ..   /1 = 15.62 kHz PWM
@@ -278,10 +279,12 @@ void initPWM(void)
   //   Set on Compare Match when down-counting.
   TCCR1A |= (1 << COM1A1) | (0 << COM1A0);
   TCCR1A |= (1 << COM1B1) | (0 << COM1B0);
-  TIMSK1 |= (1 << OCIE1B);
+  //TIMSK1 |= (1 << OCIE1B);
   ICR1 = MAX_PWM;
   //OCR1A = 0; // Debug PWM
   OCR1B = 1; //ISR 
+  OCR1A = MAX_PWM/2; // Debug PWM
+  //OCR1B = MAX_PWM;
 }
 
 void setFeedback(int force)
