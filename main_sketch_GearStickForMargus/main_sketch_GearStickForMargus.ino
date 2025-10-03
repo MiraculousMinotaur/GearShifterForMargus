@@ -152,7 +152,7 @@ void tick(void)
     default:
         DEBUG_PRINTLN("ERROR: default");
     }
-  DEBUG_PRINTLN(currentPosition);
+  //DEBUG_PRINTLN(currentPosition);
   oldState = thisState;
 }
 #if FFB
