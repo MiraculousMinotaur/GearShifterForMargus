@@ -227,25 +227,35 @@ void setMotor(int force)
 
 
 int lastPosition = 0;
+long integral = 0;
+
+const float Kp = 0.05;     // proportional gain
+const float Ki = 0.0005;   // integral gain (very small!)
+const float Kd = 0.1;      // derivative gain
+const int CENTER_LIMIT = 120; // max PWM allowed for centering
 
 void selfCenter(int wheelOutput)
 {
-  // Spring force
-  int springForce = (0 - wheelOutput) * 0.05;   // tune Kp
+  int error = 0 - wheelOutput;
 
-  // Damping force
+  // Integral with windup guard
+  integral += error;
+  if(integral > 10000) integral = 10000;
+  if(integral < -10000) integral = -10000;
+
+  // Derivative
   int velocity = currentPosition - lastPosition;
   lastPosition = currentPosition;
-  int dampingForce = -velocity * 0.1;           // tune Kd
 
-  // Combine
-  int totalForce = springForce + dampingForce;
+  // PID
+  float force = (Kp * error) + (Ki * integral) - (Kd * velocity);
 
-  // Safety clamp
-  totalForce = limit(totalForce, -MAX_CENTERING_PWM, MAX_CENTERING_PWM);
+  // Clamp
+  int pwmForce = limit((int)force, -MAX_CENTERING_PWM, MAX_CENTERING_PWM);
 
-  setMotor(totalForce);
-}
+  setMotor(pwmForce);
+};
+
 #endif
 #endif
 #if PEDALS || WHEEL || FFB
