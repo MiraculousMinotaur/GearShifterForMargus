@@ -112,6 +112,7 @@ void handleGear(&bool currentlyActive, uint8_t prevState, &uint8_t pins, size_t 
 // Motor Pins
 #define MOTOR_PIN_A 9
 #define MOTOR_PIN_B 10
+#define MOTOR_PIN_ENABLE A0
 // Motor Limits
 #define MAX_PWM 200 // Going full 255 has higher chance to burn the motor
 #define MAX_FORCES 250 // Testing revealed Force MAX values is 250
@@ -208,8 +209,8 @@ void setMotor(int force)
     force *= 3;//scale for PWM
     if(0 > force)
     {
-        OCR1B = force;
         OCR1A = 0;
+        OCR1B = force;
     }
     else if (0 < force)
     {
@@ -272,8 +273,11 @@ void setup() {
 #if FFB
   pinMode(MOTOR_PIN_A, OUTPUT);
   pinMode(MOTOR_PIN_B, OUTPUT);
+  pinMode(MOTOR_PIN_ENABLE, OUTPUT);
+  digitalWrite(MOTOR_PIN_ENABLE, HIGH);
   beginFFBRequestTimer();
   initPWM();
+  setMotor(0);
 
   effectparams[0].springMaxPosition = ENCODER_MAX_VALUE;
   effectparams[0].springPosition = currentPosition;
