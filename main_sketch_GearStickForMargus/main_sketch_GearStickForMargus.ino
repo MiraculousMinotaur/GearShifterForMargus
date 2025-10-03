@@ -224,11 +224,26 @@ void setMotor(int force)
     }
 }
 
+
+int lastPosition = 0;
+
 void selfCenter(int wheelOutput)
 {
-  if(wheelOutput > 0){setMotor(50);}
-  else if(wheelOutput < 0){setMotor(-50);}
-  else{setMotor(0);}
+  // Spring force
+  int springForce = (0 - wheelOutput) * 0.05;   // tune Kp
+
+  // Damping force
+  int velocity = currentPosition - lastPosition;
+  lastPosition = currentPosition;
+  int dampingForce = -velocity * 0.1;           // tune Kd
+
+  // Combine
+  int totalForce = springForce + dampingForce;
+
+  // Safety clamp
+  totalForce = limit(totalForce, -MAX_PWM, MAX_PWM);
+
+  setMotor(totalForce);
 }
 #endif
 #endif
