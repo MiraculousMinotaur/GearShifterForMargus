@@ -170,10 +170,10 @@ void beginFFBRequestTimer(void)
   TCCR3A = 0; //set TCCR1A 0
   TCCR3B = 0; //set TCCR1B 0
   TCNT3  = 0; //counter init
-  OCR3A = 400; // 5KHz with 8-fold prescaler TODO can slow down
-  TCCR3B |= (1 << WGM32); //open CTC mode
-  TCCR3B |= (1 << CS31  ); //set CS11 1(8-fold Prescaler)
-  TIMSK3 |= (1 << OCIE3A); //
+  OCR3A = 1041; // ~240 Hz
+  TCCR3B |= (1 << WGM32); // CTC mode
+  TCCR3B |= (1 << CS31) | (1 << CS30); // prescaler /64
+  TIMSK3 |= (1 << OCIE3A); // enable compare interrupt/
   sei();
 }
 
