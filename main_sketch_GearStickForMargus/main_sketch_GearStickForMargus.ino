@@ -230,7 +230,7 @@ int lastPosition = 0;
 long integral = 0;
 
 const float Kp = 0.05;     // proportional gain
-const float Ki = 0.0005;   // integral gain (very small!)
+const float Ki = 0.05;   // integral gain (very small!)
 const float Kd = 0.1;      // derivative gain
 const int CENTER_LIMIT = 120; // max PWM allowed for centering
 
@@ -253,7 +253,7 @@ void selfCenter(int wheelOutput)
   // Clamp
   int pwmForce = limit((int)force, -MAX_CENTERING_PWM, MAX_CENTERING_PWM);
 
-  setMotor(pwmForce);
+  setMotor(-pwmForce);
 };
 
 #endif
