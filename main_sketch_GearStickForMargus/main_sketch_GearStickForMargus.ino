@@ -115,6 +115,7 @@ void handleGear(&bool currentlyActive, uint8_t prevState, &uint8_t pins, size_t 
 #define MOTOR_PIN_ENABLE A0
 // Motor Limits
 #define MAX_PWM 200 // Going full 255 has higher chance to burn the motor
+#define MAX_CENTERING_PWM 50 // Going full 255 has higher chance to burn the motor
 #define MAX_FORCES 250 // Testing revealed Force MAX values is 250
 #define PWM_FORCE_CONVERION MAX_PWM/MAX_FORCES // If better feedback granualarity needed in higer forces implement this conversion
 #endif
@@ -241,7 +242,7 @@ void selfCenter(int wheelOutput)
   int totalForce = springForce + dampingForce;
 
   // Safety clamp
-  totalForce = limit(totalForce, -MAX_PWM, MAX_PWM);
+  totalForce = limit(totalForce, -MAX_CENTERING_PWM, MAX_CENTERING_PWM);
 
   setMotor(totalForce);
 }
