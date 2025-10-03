@@ -207,12 +207,12 @@ void initPWM(void)
 void setMotor(int force)
 {
     force *= 3;//scale for PWM
-    if(0 > force)
+    if(0 < force)
     {
         OCR1A = 0;
         OCR1B = force;
     }
-    else if (0 < force)
+    else if (0 > force)
     {
         OCR1B = 0;
         OCR1A = -force;
