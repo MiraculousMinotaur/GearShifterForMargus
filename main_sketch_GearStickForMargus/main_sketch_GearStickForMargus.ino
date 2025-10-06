@@ -106,15 +106,15 @@ void handleGear(&bool currentlyActive, uint8_t prevState, &uint8_t pins, size_t 
 #define ENCODER_PIN_A 2
 #define ENCODER_PIN_B 3
 // Encoder Limitis
-#define ENCODER_MIN_VALUE -6000 // One Full rotation is 2400
-#define ENCODER_MAX_VALUE 6000
+#define ENCODER_MIN_VALUE -3600 // One Full rotation is 2400
+#define ENCODER_MAX_VALUE 3600
 #if FFB
 // Motor Pins
 #define MOTOR_PIN_A 9
 #define MOTOR_PIN_B 10
 #define MOTOR_PIN_ENABLE A0
 // Motor Limits
-#define MAX_PWM 200 // Going full 255 has higher chance to burn the motor
+#define MAX_PWM 125 // Going full 255 has higher chance to burn the motor
 #define MAX_CENTERING_PWM 50 // Going full 255 has higher chance to burn the motor
 #define MAX_FORCES 250 // Testing revealed Force MAX values is 250
 #define PWM_FORCE_CONVERION MAX_PWM/MAX_FORCES // If better feedback granualarity needed in higer forces implement this conversion
@@ -387,7 +387,7 @@ void loop()
   int force = limit((int)forces[0], -MAX_PWM, MAX_PWM);
   DEBUG_PRINT(" Force: ");
   DEBUG_PRINTLN(force);
-  setMotor(force);
+  setMotor(-force);
   //selfCenter(wheelOutput);
 #endif
 #endif
