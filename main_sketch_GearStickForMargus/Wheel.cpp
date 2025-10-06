@@ -152,11 +152,6 @@ static int rampForceToPWM(int rawForce)
   return pwm;
 }
 
-// Endpoint enforcement: when encoder goes outside allowed range, compute a
-// proportional motor PWM to push it back towards the valid boundary.
-// ENDPOINT_BAND determines how aggressively we try to bring it back: smaller
-// values make the motor reach MAX_PWM on smaller breaches.
-#define ENDPOINT_BAND 8
 static int computeEndpointPWM(void)
 {
   if (currentPosition > ENCODER_MAX_VALUE)

@@ -16,4 +16,9 @@
 // Make the global Joystick object accessible from .cpp modules
 extern Joystick_ Joystick;
 
+// Endpoint enforcement tuning (used by Wheel.cpp)
+// Higher values make the endpoint enforcement engage sooner (smaller breach)
+// Set to 24 so that ~1/8 of a full rotation (~300 encoder clicks) will reach MAX_PWM
+#define ENDPOINT_BAND 24
+
 #endif // CONFIG_H
