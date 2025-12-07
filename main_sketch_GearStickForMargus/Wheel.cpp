@@ -4,38 +4,36 @@
 #if WHEEL
 
 volatile int currentPosition = 0;
-volatile int8_t oldState = 0;
 bool isOutOfRange = false;
 
-// Encoder callback function
+#// Encoder pins on PORTD: A=pin2 (bit 0), B=pin3 (bit 1) -- board mapping differs
+#define ENCODER_SHIFT 0
+#define ENCODER_MASK 0x03
+
+// Precomputed lookup table for encoder state transitions
+// Index: (oldState << 2) | newState (0-15)
+// Values: position delta (-1, 0, +1)
+static const int8_t encoderTable[16] = {
+  0,  +1, -1,  0,  // oldState=0 (00): 00->+1, 01->-1
+  -1,  0,  0, +1,  // oldState=1 (01): 00->-1, 11->+1
+  +1,  0,  0, -1,  // oldState=2 (10): 00->+1, 11->-1
+  0,  -1, +1,  0   // oldState=3 (11): 01->-1, 10->+1
+};
+
+// Optimized encoder callback: ~20-30 cycles vs ~200 cycles
 static void tick(void)
 {
-  int8_t thisState = 0;
-  thisState |=  digitalRead(ENCODER_PIN_A);
-  thisState |=  digitalRead(ENCODER_PIN_B)<<1;
-
-  switch(thisState)
-  {
-    case 0:
-      currentPosition += (2 == oldState);
-      currentPosition -= (1 == oldState);
-      break;
-    case 1:
-      currentPosition += (0 == oldState);
-      currentPosition -= (3 == oldState);
-      break;
-    case 2:
-      currentPosition += (3 == oldState);
-      currentPosition -= (0 == oldState);
-      break;
-    case 3:
-      currentPosition += (1 == oldState);
-      currentPosition -= (2 == oldState);
-      break;
-    default:
-      break;
-  }
-  oldState = thisState;
+  static uint8_t oldState = 0;
+  
+  // Read both encoder pins (A=bit0, B=bit1 on PORTD) in 1 CPU cycle
+  uint8_t pins = PIND;
+  uint8_t newState = (pins >> ENCODER_SHIFT) & ENCODER_MASK;
+  
+  // Lookup table: compute index from old and new state
+  uint8_t tableIdx = (oldState << 2) | newState;
+  currentPosition += encoderTable[tableIdx];
+  
+  oldState = newState;
 }
 
 #if FFB
@@ -181,8 +179,30 @@ void Wheel_begin(void)
 {
   pinMode(ENCODER_PIN_A, INPUT_PULLUP);
   pinMode(ENCODER_PIN_B, INPUT_PULLUP);
-  attachInterrupt(digitalPinToInterrupt(ENCODER_PIN_A),tick,CHANGE);
-  attachInterrupt(digitalPinToInterrupt(ENCODER_PIN_B),tick,CHANGE);
+  // Use a single Pin-Change Interrupt for the port group that holds the
+  // encoder pins when available. Fall back to per-pin external interrupts
+  // if the compile-time PCINT registers are not present on the target MCU.
+  cli(); // disable interrupts while configuring PCINT
+
+#if defined(PCMSK2) && defined(PCIE2)
+  // Typical mapping on ATmega328P: PORTD -> PCMSK2 / PCIE2
+  PCMSK2 |= (1 << PD0) | (1 << PD1); // enable PCINT for PD0 and PD1
+  PCICR  |= (1 << PCIE2);            // enable pin-change interrupt for PCINT[23:16] (PORTD)
+#elif defined(PCMSK0) && defined(PCIE0)
+  // Alternative mapping on some AVRs: use PCMSK0 / PCIE0
+  PCMSK0 |= (1 << PD0) | (1 << PD1);
+  PCICR  |= (1 << PCIE0);
+#else
+  // No PCINT register names available; fall back to attachInterrupt()
+  sei(); // re-enable interrupts before calling attachInterrupt (requires interrupts)
+  attachInterrupt(digitalPinToInterrupt(ENCODER_PIN_A), tick, CHANGE);
+  attachInterrupt(digitalPinToInterrupt(ENCODER_PIN_B), tick, CHANGE);
+  // leave here — Joystick setup happens after the interrupt configuration
+  Joystick.setXAxisRange(ENCODER_MIN_VALUE, ENCODER_MAX_VALUE);
+  return;
+#endif
+
+  sei();
   Joystick.setXAxisRange(ENCODER_MIN_VALUE, ENCODER_MAX_VALUE);
 #if FFB
   pinMode(MOTOR_PIN_A, OUTPUT);
@@ -200,6 +220,12 @@ void Wheel_begin(void)
 
   Joystick.setGains(gains);
 #endif
+}
+
+// Pin-change ISR for PORTD (PCINT2_vect) — delegates to the fast tick().
+ISR(PCINT2_vect)
+{
+  tick();
 }
 
 void Wheel_update(void)

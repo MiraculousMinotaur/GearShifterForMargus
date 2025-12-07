@@ -3,6 +3,8 @@
 
 #include <Arduino.h>
 #include <Joystick.h>
+#include <avr/io.h>
+#include <avr/interrupt.h>
 #include "Config.h"
 #include "Utils.h"
 
