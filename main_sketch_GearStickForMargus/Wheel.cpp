@@ -6,8 +6,8 @@
 volatile int currentPosition = 0;
 bool isOutOfRange = false;
 
-#// Encoder pins on PORTD: A=pin2 (bit 0), B=pin3 (bit 1) -- board mapping differs
-#define ENCODER_SHIFT 0
+// Encoder pins on PORTD: A=pin2 (bit 2), B=pin3 (bit 3)
+#define ENCODER_SHIFT 2
 #define ENCODER_MASK 0x03
 
 // Precomputed lookup table for encoder state transitions
@@ -25,7 +25,7 @@ static void tick(void)
 {
   static uint8_t oldState = 0;
   
-  // Read both encoder pins (A=bit0, B=bit1 on PORTD) in 1 CPU cycle
+  // Read both encoder pins (A=bit2, B=bit3 on PORTD) in 1 CPU cycle
   uint8_t pins = PIND;
   uint8_t newState = (pins >> ENCODER_SHIFT) & ENCODER_MASK;
   
@@ -179,30 +179,8 @@ void Wheel_begin(void)
 {
   pinMode(ENCODER_PIN_A, INPUT_PULLUP);
   pinMode(ENCODER_PIN_B, INPUT_PULLUP);
-  // Use a single Pin-Change Interrupt for the port group that holds the
-  // encoder pins when available. Fall back to per-pin external interrupts
-  // if the compile-time PCINT registers are not present on the target MCU.
-  cli(); // disable interrupts while configuring PCINT
-
-#if defined(PCMSK2) && defined(PCIE2)
-  // Typical mapping on ATmega328P: PORTD -> PCMSK2 / PCIE2
-  PCMSK2 |= (1 << PD0) | (1 << PD1); // enable PCINT for PD0 and PD1
-  PCICR  |= (1 << PCIE2);            // enable pin-change interrupt for PCINT[23:16] (PORTD)
-#elif defined(PCMSK0) && defined(PCIE0)
-  // Alternative mapping on some AVRs: use PCMSK0 / PCIE0
-  PCMSK0 |= (1 << PD0) | (1 << PD1);
-  PCICR  |= (1 << PCIE0);
-#else
-  // No PCINT register names available; fall back to attachInterrupt()
-  sei(); // re-enable interrupts before calling attachInterrupt (requires interrupts)
-  attachInterrupt(digitalPinToInterrupt(ENCODER_PIN_A), tick, CHANGE);
-  attachInterrupt(digitalPinToInterrupt(ENCODER_PIN_B), tick, CHANGE);
-  // leave here — Joystick setup happens after the interrupt configuration
-  Joystick.setXAxisRange(ENCODER_MIN_VALUE, ENCODER_MAX_VALUE);
-  return;
-#endif
-
-  sei();
+  attachInterrupt(digitalPinToInterrupt(ENCODER_PIN_A),tick,CHANGE);
+  attachInterrupt(digitalPinToInterrupt(ENCODER_PIN_B),tick,CHANGE);
   Joystick.setXAxisRange(ENCODER_MIN_VALUE, ENCODER_MAX_VALUE);
 #if FFB
   pinMode(MOTOR_PIN_A, OUTPUT);
@@ -222,12 +200,6 @@ void Wheel_begin(void)
 #endif
 }
 
-// Pin-change ISR for PORTD (PCINT2_vect) — delegates to the fast tick().
-ISR(PCINT2_vect)
-{
-  tick();
-}
-
 void Wheel_update(void)
 {
   int wheelOutput = limitVal(currentPosition, ENCODER_MIN_VALUE, ENCODER_MAX_VALUE);
@@ -241,8 +213,8 @@ void Wheel_update(void)
   if (endpointPWM != 0)
   {
     // If position is above max, we want to drive motor negative (back towards center)
-    if (currentPosition > ENCODER_MAX_VALUE) setMotor(-endpointPWM);
-    else setMotor(endpointPWM);
+    // ENDPOINT_BAND determines how aggressively we try to bring it back: larger
+    setMotor(endpointPWM);
   }
   else
   {

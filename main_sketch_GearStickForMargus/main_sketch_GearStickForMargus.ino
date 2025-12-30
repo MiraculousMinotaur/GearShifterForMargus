@@ -5,6 +5,7 @@
 #include "Utils.h"
 #include "Gears.h"
 #include "Wheel.h"
+#include "ACS712Driver.h"
 #include "Pedals.h"
 
 #if DEBUG
@@ -35,12 +36,18 @@ void setup() {
   Wheel_begin();
 #endif
 
+  // ACS712 current-sensor driver
+  ACS712_begin();
+
   // Initialize Joystick Library
   Joystick.begin(true);
 }
 
 #if FFB
-ISR(TIMER3_COMPA_vect){ Joystick.getUSBPID(); }
+ISR(TIMER3_COMPA_vect){
+  Joystick.getUSBPID();
+  ACS712_onTimerTick_ISR();
+}
 #endif
 
 void loop() 
@@ -61,4 +68,10 @@ void loop()
 #if WHEEL
   Wheel_update();
 #endif
+
+  // ACS712 driver background sampling & command processing
+  ACS712_backgroundTask();
+
+  // Apply control if timer ticked (non-blocking)
+  ACS712_update();
 }

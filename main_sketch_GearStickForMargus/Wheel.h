@@ -28,6 +28,10 @@
 #define MAX_FORCES 250 // Testing revealed Force MAX values is 250
 #endif
 
+#if FFB
+void setMotor(int force);
+#endif
+
 void Wheel_begin();
 void Wheel_update();
 
