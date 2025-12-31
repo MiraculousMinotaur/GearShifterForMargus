@@ -9,4 +9,12 @@ void Motor_set(int force);
 // legacy name kept for compatibility
 void setMotor(int force);
 
+// FFB helpers
+int Motor_rampForceToPWM(int rawForce);
+int Motor_computeEndpointPWM(int currentPosition);
+void Motor_selfCenter(int wheelOutput);
+
+// Diagnostic
+int Motor_getLastForce(void);
+
 #endif // MOTOR_H

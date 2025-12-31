@@ -53,32 +53,7 @@ EffectParams effectparams[2];
 int lastPosition = 0;
 long integral = 0;
 
-const float Kp = 0.05;     // proportional gain
-const float Ki = 0.05;   // integral gain (very small!)
-const float Kd = 0.1;      // derivative gain
-const int CENTER_LIMIT = 120; // max PWM allowed for centering
-
-void selfCenter(int wheelOutput)
-{
-  int error = 0 - wheelOutput;
-
-  // Integral with windup guard
-  integral += error;
-  if(integral > 10000) integral = 10000;
-  if(integral < -10000) integral = -10000;
-
-  // Derivative
-  int velocity = currentPosition - lastPosition;
-  lastPosition = currentPosition;
-
-  // PID
-  float force = (Kp * error) + (Ki * integral) - (Kd * velocity);
-
-  // Clamp
-  int pwmForce = limitVal((int)force, -MAX_CENTERING_PWM, MAX_CENTERING_PWM);
-
-  setMotor(-pwmForce);
-};
+// self-centering and PID control moved to Motor_selfCenter() in motor.cpp.
 
 #endif // FFB
 
@@ -167,7 +142,7 @@ void Wheel_update(void)
   Joystick.setEffectParams(effectparams);
   Joystick.getForce(forces);
   // First, check endpoint breach and apply corrective PWM if needed
-  int endpointPWM = computeEndpointPWM();
+  int endpointPWM = Motor_computeEndpointPWM(wheelOutput);
   if (endpointPWM != 0)
   {
     // If position is above max, we want to drive motor negative (back towards center)
@@ -180,7 +155,7 @@ void Wheel_update(void)
     // map it to a smoother PWM curve and apply with direction.
     int rawForce = (int)forces[0];
     int sign = (rawForce < 0) ? -1 : 1;
-    int pwm = rampForceToPWM(rawForce);
+    int pwm = Motor_rampForceToPWM(rawForce);
     pwm = limitVal(pwm, 0, MAX_PWM);
     setMotor(- (sign * pwm));
   }

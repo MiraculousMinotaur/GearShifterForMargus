@@ -17,6 +17,9 @@
 #define ENCODER_MIN_VALUE -3600 // One Full rotation is 2400
 #define ENCODER_MAX_VALUE 3600
 
+// Expose position for diagnostics
+extern volatile int currentPosition;
+
 #if FFB
 // Motor Pins
 #define MOTOR_PIN_A 9

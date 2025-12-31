@@ -4,6 +4,7 @@
 #include "Utils.h"
 #include "motor.h"
 
+
 // Configurable parameters
 static const float DEFAULT_KP = 1.0f;
 static const float DEFAULT_KI = 0.1f;
@@ -16,7 +17,7 @@ static int zeroADC = 513;
 static const float ADC_PER_A_POS = 13.0f;  // +1A => 526 (Δ+13)
 static const float ADC_PER_A_NEG = 14.0f;  // -1A => 499 (Δ-14)
 
-// Sampling & timing
+// Sampling & timing // TODO sampling tuning will be handled by register HW config handled in SetupADC() function removed unneccesary values
 static const uint16_t CONTROL_HZ = 240; // default control rate (Hz)
 static const uint32_t CONTROL_INTERVAL_US = 1000000UL / CONTROL_HZ;
 static const uint8_t SAMPLES_PER_CYCLE = 4;
@@ -165,6 +166,7 @@ void ACS712_update()
   }
 
   lastADC = avgADC;
+  // TODO: remove ADC conversions to AMPS, use DIRECT ADC values in control loop for better performance
   lastMeasuredAmps = adcToAmps(avgADC);
 
   // Safety: shut down if exceeds SHUTOFF
