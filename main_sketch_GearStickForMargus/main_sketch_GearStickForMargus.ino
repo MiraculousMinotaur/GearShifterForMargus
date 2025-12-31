@@ -7,6 +7,8 @@
 #include "Wheel.h"
 #include "ACS712Driver.h"
 #include "Pedals.h"
+#include "Scheduler.h"
+#include "DebugManager.h"
 
 #if DEBUG
 #define DEBUG_PRINT(...) Serial.print(__VA_ARGS__)
@@ -41,37 +43,75 @@ void setup() {
 
   // Initialize Joystick Library
   Joystick.begin(true);
+
+  // Start the 1ms scheduler and debug manager
+#if FFB
+  Scheduler_start();
+#endif
+  DebugManager_init();
 }
+
 
 #if FFB
 ISR(TIMER3_COMPA_vect){
-  Joystick.getUSBPID();
-  ACS712_onTimerTick_ISR();
+  // Minimal ISR: set scheduler flag only. Heavy work happens in main context.
+  scheduler_ms_flag = 1;
 }
 #endif
 
 void loop() 
 {
-#if DEBUG
-  delay(100);
-#endif
-
-  // Module updates
-#if PEDALS
-  Pedals_update();
-#endif
-
-#if GEARS
-  Gears_update();
-#endif
-
-#if WHEEL
-  Wheel_update();
-#endif
+  // Module updates are scheduled by the 1ms Scheduler (see Scheduler_start and scheduler flag handling).
 
   // ACS712 driver background sampling & command processing
   ACS712_backgroundTask();
 
-  // Apply control if timer ticked (non-blocking)
-  ACS712_update();
+  // Scheduler-driven tasks triggered from Timer3 (1ms tick)
+  if (scheduler_ms_flag)
+  {
+    // clear flag atomically
+    noInterrupts();
+    scheduler_ms_flag = 0;
+    interrupts();
+
+    static uint16_t schedCounter = 0;
+    schedCounter++;
+
+    // 1) Every loop: current control trigger (set tick and perform update)
+    ACS712_onTimerTick_ISR();
+    ACS712_update();
+
+    // 1.2) Every other loop: request FFB/USB processing
+    if ((schedCounter & 1) == 0)
+    {
+      Joystick.getUSBPID();
+    }
+
+    // 1.3) Every 10th loop: alternate pedals/gears reads
+    if ((schedCounter % 10) == 0)
+    {
+      static bool readPedals = true;
+      if (readPedals)
+      {
+        #if PEDALS
+        Pedals_update();
+        #endif
+      }
+      else
+      {
+        #if GEARS
+        Gears_update();
+        #endif
+      }
+      readPedals = !readPedals;
+    }
+
+    // Wheel update runs each scheduler cycle to update axis and apply FFB/motor targets
+    #if WHEEL
+    Wheel_update();
+    #endif
+
+    // 1.4) Debug manager at end of cycle
+    DebugManager_update();
+  }
 }

@@ -2,7 +2,7 @@
 #define CONFIG_H
 
 // Feature flags -- centralized so .cpp/.h files can see the same values as the .ino
-#define DEBUG 0
+#define DEBUG 1
 #define PEDALS 0
 #define GEARS 0 // TODO: conflicts with wheel pins for now.
 #define WHEEL 1

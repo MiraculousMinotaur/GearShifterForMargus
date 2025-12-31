@@ -2,6 +2,7 @@
 #include "Wheel.h"
 #include "Config.h"
 #include "Utils.h"
+#include "motor.h"
 
 // Configurable parameters
 static const float DEFAULT_KP = 1.0f;
@@ -51,7 +52,7 @@ void ACS712_onTimerTick_ISR()
 
 void ACS712_begin()
 {
-  pinMode(A5, INPUT);
+  pinMode(A5, INPUT);// TODO: move Pin definitions to header
   pinMode(A4, OUTPUT);
   digitalWrite(A4, HIGH); // power the ACS712 module
   // initialize timers/state
@@ -63,6 +64,35 @@ void ACS712_begin()
   enabled = false;
 }
 
+/* TODO: make proper implementation of non-blocking ADC sampling using interrupts
+void setupADC() {
+    // 1. Set Reference to AVcc (5V) and select the channel (e.g., ADC0 / Pin A0)
+    ADMUX = (1 << REFS0); 
+
+    // 2. Set ADC Prescaler to 128 (16MHz / 128 = 125kHz sampling clock)
+    // This is the most accurate speed for the ATmega32U4 ADC.
+    ADCSRA = (1 << ADPS2) | (1 << ADPS1) | (1 << ADPS0);
+
+    // 3. Enable Auto Triggering and the ADC Interrupt
+    ADCSRA |= (1 << ADATE) | (1 << ADIE);
+
+    // 4. Set Auto Trigger source to "Free Running Mode" (bits 2:0 are 0)
+    ADCSRB &= ~((1 << ADTS2) | (1 << ADTS1) | (1 << ADTS0));
+
+    // 5. Enable the ADC and start the first conversion
+    ADCSRA |= (1 << ADEN) | (1 << ADSC);
+    
+    sei(); // Ensure global interrupts are enabled
+}
+*/
+
+/* TODO implement simple ADC ISR for non-blocking sampling
+      * ISR(ADC_vect) {
+            adcSum += ADC; // Add 10-bit result to sum
+            adcCount++;
+            }
+*/
+
 void ACS712_backgroundTask()
 {
   unsigned long now = micros();
@@ -72,7 +102,8 @@ void ACS712_backgroundTask()
     lastSampleMicros = now;
     if (sampleCount < SAMPLES_PER_CYCLE)
     {
-      int v = analogRead(A5); // blocking but short; distributed across loop cycles
+      int v = analogRead(A5); // TODO: move Pin definitions to header
+      //TODO: replace blocking read with non-blocking continuous sampling using ADC interrupts
       samples[sampleCount++] = v;
       lastADC = v;
     }
