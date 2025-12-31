@@ -102,7 +102,8 @@ void Motor_selfCenter(int wheelOutput)
   // Internal PID maintained in motor module
   static int lastPosition = 0;
   static long integral = 0;
-
+ // TODO: move to .h for configuration
+ // TODO: use integer calculation instead of float
   const float Kp = 0.05;     // proportional gain
   const float Ki = 0.05;   // integral gain (very small!)
   const float Kd = 0.1;      // derivative gain

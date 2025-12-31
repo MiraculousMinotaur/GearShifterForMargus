@@ -4,7 +4,7 @@
 #include "Utils.h"
 #include "motor.h"
 
-
+//TODO: don't use floats for better performance on 8-bit MCU
 // Configurable parameters
 static const float DEFAULT_KP = 1.0f;
 static const float DEFAULT_KI = 0.1f;
@@ -12,7 +12,7 @@ static const float DEFAULT_KD = 0.0f;
 static const float MAX_AMPS = 10.0f;       // limit (user requirement)
 static const float SHUTOFF_AMPS = 14.0f;   // immediate shutoff if exceeded
 
-// ADC calibration defaults (10-bit ADC values)
+// ADC calibration defaults (10-bit ADC values) // TODO: use mA rather than A for better precision and non float calculations
 static int zeroADC = 513;
 static const float ADC_PER_A_POS = 13.0f;  // +1A => 526 (Δ+13)
 static const float ADC_PER_A_NEG = 14.0f;  // -1A => 499 (Δ-14)
