@@ -2,6 +2,7 @@
 #include "Config.h"
 #include "Utils.h"
 #include <avr/io.h>
+#include "FixedPoint.h"
 
 static int lastForce = 0; // scaled user value passed to Motor_set (pre-scaling)
 
@@ -101,29 +102,35 @@ void Motor_selfCenter(int wheelOutput)
 {
   // Internal PID maintained in motor module
   static int lastPosition = 0;
-  static long integral = 0;
+  static int32_t integral_q = 0;
  // TODO: move to .h for configuration
  // TODO: use integer calculation instead of float
-  const float Kp = 0.05;     // proportional gain
-  const float Ki = 0.05;   // integral gain (very small!)
-  const float Kd = 0.1;      // derivative gain
+  // Gains in Q8 fixed-point
+  const int16_t Kp_q8 = (int16_t)(0.05 * SCALE_Q8);     // ~13
+  const int16_t Ki_q8 = (int16_t)(0.05 * SCALE_Q8);     // ~13
+  const int16_t Kd_q8 = (int16_t)(0.1  * SCALE_Q8);     // ~26
 
   int error = 0 - wheelOutput;
 
-  // Integral with windup guard
-  integral += error;
-  if(integral > 10000) integral = 10000;
-  if(integral < -10000) integral = -10000;
+  // Integral with windup guard (integrator holds raw sum)
+  integral_q += error;
+  if (integral_q > 10000) integral_q = 10000;
+  if (integral_q < -10000) integral_q = -10000;
 
   // Derivative
   int velocity = wheelOutput - lastPosition; // wheelOutput provides current position snapshot
   lastPosition = wheelOutput;
 
-  // PID
-  float force = (Kp * error) + (Ki * integral) - (Kd * velocity);
+  // PID in Q8 domain
+  int64_t termP = (int64_t)Kp_q8 * (int64_t)error; // Q8*int -> Q8*int
+  int64_t termI = ((int64_t)Ki_q8 * (int64_t)integral_q) / (int64_t)SCALE_Q8; // back to Q8
+  int64_t termD = ((int64_t)Kd_q8 * (int64_t)velocity) / (int64_t)SCALE_Q8;
+
+  int64_t u_q8 = termP + termI - termD;
+  int32_t u = (int32_t)(u_q8 / (int64_t)SCALE_Q8); // back to native units
 
   // Clamp to centering limit
-  int pwmForce = limitVal((int)force, -MAX_CENTERING_PWM, MAX_CENTERING_PWM);
+  int pwmForce = limitVal(u, -MAX_CENTERING_PWM, MAX_CENTERING_PWM);
 
   setMotor(-pwmForce);
 }

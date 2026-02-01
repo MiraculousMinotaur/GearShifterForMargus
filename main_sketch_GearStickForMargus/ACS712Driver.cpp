@@ -3,11 +3,12 @@
 #include "Config.h"
 #include "Utils.h"
 #include "motor.h"
+#include "FixedPoint.h"
 
 // Configurable parameters (raw ADC units, no conversion)
-static const float DEFAULT_KP = 1.0f;
-static const float DEFAULT_KI = 0.1f;
-static const float DEFAULT_KD = 0.0f;
+static const int16_t DEFAULT_KP_Q8 = (int16_t)(1 * SCALE_Q8); // 1.0 -> 256
+static const int16_t DEFAULT_KI_Q8 = (int16_t)(26); // ~0.1 * 256 = 25.6 -> 26
+static const int16_t DEFAULT_KD_Q8 = (int16_t)(0);
 static const int MAX_ADC_DELTA = 130;      // max ADC delta from zero (corresponds to ~10A)
 static const int SHUTOFF_ADC_DELTA = 182;  // emergency shutoff threshold (corresponds to ~14A)
 
@@ -29,11 +30,11 @@ static unsigned long lastSampleMicros = 0;
 static int samples[SAMPLES_PER_CYCLE];
 static uint8_t sampleCount = 0;
 
-static float Kp = DEFAULT_KP;
-static float Ki = DEFAULT_KI;
-static float Kd = DEFAULT_KD;
-static float integrator = 0.0f;
-static float lastError = 0.0f;
+static int16_t Kp_q8 = DEFAULT_KP_Q8;
+static int16_t Ki_q8 = DEFAULT_KI_Q8;
+static int16_t Kd_q8 = DEFAULT_KD_Q8;
+static int32_t integrator_q = 0;
+static int16_t lastError_i = 0;
 static int targetADC = 0;  // target raw ADC value
 static bool enabled = false;
 
@@ -56,8 +57,8 @@ void ACS712_begin()
   // initialize timers/state
   lastSampleMicros = micros();
   sampleCount = 0;
-  integrator = 0.0f;
-  lastError = 0.0f;
+  integrator_q = 0;
+  lastError_i = 0;
   targetADC = zeroADC;  // default target is zero current (at zeroADC)
   enabled = false;
 }
@@ -164,28 +165,36 @@ void ACS712_update()
   {
     // Controller disabled: ensure motor off
     setMotor(0);
-    integrator = 0.0f;
-    lastError = 0.0f;
+    integrator_q = 0;
+    lastError_i = 0;
     lastDuty = 0;
     return;
   }
 
-  // Control law: PI using raw ADC values (no derivative by default)
-  float error = (float)(targetADC - avgADC);
-  float dt = (float)CONTROL_INTERVAL_US / 1000000.0f; // seconds
+  // Control law: PI using raw ADC values (integer fixed-point Q8 gains)
+  int32_t error = (int32_t)targetADC - (int32_t)avgADC; // ADC units
 
-  integrator += error * dt;
+  // Integrator (per-control-tick interpretation)
+  integrator_q += error;
   // anti-windup: clamp integrator to reasonable range
-  float integLimit = (float)MAX_ADC_DELTA * 10.0f;
-  if (integrator > integLimit) integrator = integLimit;
-  if (integrator < -integLimit) integrator = -integLimit;
+  int32_t integLimit = (int32_t)MAX_ADC_DELTA * 10;
+  if (integrator_q > integLimit) integrator_q = integLimit;
+  if (integrator_q < -integLimit) integrator_q = -integLimit;
 
-  float u = (Kp * error) + (Ki * integrator) - (Kd * ((error - lastError) / dt));
-  lastError = error;
+  // Compute control output in Q8 domain: u_q8 = Kp_q8*error + (Ki_q8*integrator)/SCALE_Q8 - (Kd_q8*(error-lastError))/SCALE_Q8
+  int64_t termP = (int64_t)Kp_q8 * (int64_t)error; // Q8 * int -> Q8*int
+  int64_t termI = ((int64_t)Ki_q8 * (int64_t)integrator_q) / (int64_t)SCALE_Q8; // bring back to Q8
+  int64_t termD = 0;
+  int32_t derror = error - (int32_t)lastError_i;
+  termD = ((int64_t)Kd_q8 * (int64_t)derror) / (int64_t)SCALE_Q8;
+
+  int64_t u_q8 = termP + termI - termD;
+  int32_t u = (int32_t)(u_q8 / (int64_t)SCALE_Q8); // back to ADC units
+  lastError_i = (int16_t)error;
 
   // Clamp output to MAX_ADC_DELTA range and convert to motor units
-  if (u > (float)MAX_ADC_DELTA) u = (float)MAX_ADC_DELTA;
-  if (u < -(float)MAX_ADC_DELTA) u = -(float)MAX_ADC_DELTA;
+  if (u > MAX_ADC_DELTA) u = MAX_ADC_DELTA;
+  if (u < -MAX_ADC_DELTA) u = -MAX_ADC_DELTA;
 
   int motorVal = (int)u;  // direct ADC delta to motor mapping
   lastDuty = motorVal;
@@ -194,24 +203,29 @@ void ACS712_update()
   setMotor(motorVal);
 }
 
-void ACS712_setTargetA(float adcValue)
+void ACS712_setTargetA(int adcValue)
 {
   // Accept raw ADC value (0-1024) directly, no conversion
-  targetADC = (int)adcValue;
+  targetADC = adcValue;
 }
 
-void ACS712_setTargetFromForce(int8_t force)
+void ACS712_setTargetFromForce(int force)
 {
-  // Map force (-127 to +127) to ADC range around zeroADC TODO: use const mapper Force values are (-255..255)
-  float frac = (float)force / 127.0f;
-  int adcTarget = zeroADC + (int)(frac * (float)MAX_ADC_DELTA);
-  ACS712_setTargetA((float)adcTarget);
+  // Map force (-MAX_FORCES .. +MAX_FORCES) to ADC range around zeroADC
+  // integer mapping: adcTarget = zeroADC + force * MAX_ADC_DELTA / MAX_FORCES
+#if defined(MAX_FORCES)
+  int adcTarget = zeroADC + ((int)force * MAX_ADC_DELTA) / MAX_FORCES;
+#else
+  // fallback to 127 if MAX_FORCES not defined
+  int adcTarget = zeroADC + ((int)force * MAX_ADC_DELTA) / 127;
+#endif
+  ACS712_setTargetA(adcTarget);
 }
 
 void ACS712_enable(bool en)
 {
   enabled = en;
-  if (!en) { integrator = 0.0f; lastError = 0.0f; setMotor(0); }
+  if (!en) { integrator_q = 0; lastError_i = 0; setMotor(0); }
 }
 
 bool ACS712_isEnabled()
@@ -219,9 +233,11 @@ bool ACS712_isEnabled()
   return enabled;
 }
 
-void ACS712_setGains(float kp, float ki, float kd)
+void ACS712_setGains_q8(int16_t kp_q8, int16_t ki_q8, int16_t kd_q8)
 {
-  Kp = kp; Ki = ki; Kd = kd;
+  Kp_q8 = kp_q8;
+  Ki_q8 = ki_q8;
+  Kd_q8 = kd_q8;
 }
 
 void ACS712_calibrateZero()
@@ -245,7 +261,7 @@ void ACS712_processCommand(const char *cmd)
   if (cmd == nullptr) return;
   if (strncasecmp(cmd, "T:", 2) == 0)
   {
-    float v = atof(cmd + 2);
+    int v = atoi(cmd + 2);
     ACS712_setTargetA(v);
 #if DEBUG
     Serial.print("OK T:"); Serial.println(v);
@@ -254,25 +270,28 @@ void ACS712_processCommand(const char *cmd)
   }
   if (strncasecmp(cmd, "Kp:", 3) == 0)
   {
-    float v = atof(cmd + 3); Kp = v;
+    q8_t v = parse_fixed_q8(cmd + 3);
+    Kp_q8 = v;
 #if DEBUG
-    Serial.print("OK Kp:"); Serial.println(Kp);
+    Serial.print("OK Kp_q8:"); Serial.println((int)Kp_q8);
 #endif
     return;
   }
   if (strncasecmp(cmd, "Ki:", 3) == 0)
   {
-    float v = atof(cmd + 3); Ki = v;
+    q8_t v = parse_fixed_q8(cmd + 3);
+    Ki_q8 = v;
 #if DEBUG
-    Serial.print("OK Ki:"); Serial.println(Ki);
+    Serial.print("OK Ki_q8:"); Serial.println((int)Ki_q8);
 #endif
     return;
   }
   if (strncasecmp(cmd, "Kd:", 3) == 0)
   {
-    float v = atof(cmd + 3); Kd = v;
+    q8_t v = parse_fixed_q8(cmd + 3);
+    Kd_q8 = v;
 #if DEBUG
-    Serial.print("OK Kd:"); Serial.println(Kd);
+    Serial.print("OK Kd_q8:"); Serial.println((int)Kd_q8);
 #endif
     return;
   }
@@ -299,8 +318,8 @@ void ACS712_processCommand(const char *cmd)
     Serial.print(" delta:"); Serial.print(lastADC - zeroADC);
     Serial.print(" target:"); Serial.print(targetADC);
     Serial.print(" duty:"); Serial.print(lastDuty);
-    Serial.print(" Kp:"); Serial.print(Kp);
-    Serial.print(" Ki:"); Serial.println(Ki);
+    Serial.print(" Kp_q8:"); Serial.print((int)Kp_q8);
+    Serial.print(" Ki_q8:"); Serial.println((int)Ki_q8);
 #endif
     return;
   }
