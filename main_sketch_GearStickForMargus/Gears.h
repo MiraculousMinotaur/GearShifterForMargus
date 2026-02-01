@@ -8,6 +8,7 @@
 #if GEARS
 
 // Six way pins
+// TODO: Pin assignments using A5/A4 may conflict with ACS712 pins (ACS712_PIN_SENSE/ACS712_PIN_POWER). Consider centralizing pin definitions in `Config.h` and providing alternative pins.
 #define SIX_WAY_PIN_1 5
 #define SIX_WAY_PIN_2 A5
 #define SIX_WAY_PIN_3 6

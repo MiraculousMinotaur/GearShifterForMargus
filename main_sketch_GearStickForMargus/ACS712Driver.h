@@ -3,6 +3,7 @@
 
 #include <Arduino.h>
 
+// Note: Pin constants (e.g., ACS712_PIN_SENSE, ACS712_PIN_POWER) are defined in `Config.h`.
 // Public API
 void ACS712_begin();
 void ACS712_update();           // call regularly in loop(), does control when timer ticked

@@ -53,9 +53,10 @@ void ACS712_onTimerTick_ISR()
 
 void ACS712_begin()
 {
-  pinMode(A5, INPUT);// TODO: move Pin definitions to header
-  pinMode(A4, OUTPUT);
-  digitalWrite(A4, HIGH); // power the ACS712 module
+  // Pin definitions centralized in Config.h: ACS712_PIN_SENSE, ACS712_PIN_POWER
+  pinMode(ACS712_PIN_SENSE, INPUT); // TODO: confirm pin doesn't conflict with GEARS/WHEEL (see Config.h)
+  pinMode(ACS712_PIN_POWER, OUTPUT);
+  digitalWrite(ACS712_PIN_POWER, HIGH); // power the ACS712 module
   // initialize timers/state
   lastSampleMicros = micros();
   sampleCount = 0;
@@ -103,8 +104,8 @@ void ACS712_backgroundTask()
     lastSampleMicros = now;
     if (sampleCount < SAMPLES_PER_CYCLE)
     {
-      int v = analogRead(A5); // TODO: move Pin definitions to header
-      //TODO: replace blocking read with non-blocking continuous sampling using ADC interrupts
+      int v = analogRead(ACS712_PIN_SENSE); // TODO: replace blocking read with non-blocking continuous sampling using ADC interrupts
+      // TODO: decide sampling strategy (free-running vs timer-triggered) and document choice
       samples[sampleCount++] = v;
       lastADC = v;
     }
