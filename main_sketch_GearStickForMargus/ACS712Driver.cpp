@@ -4,18 +4,15 @@
 #include "Utils.h"
 #include "motor.h"
 
-//TODO: don't use floats for better performance on 8-bit MCU
-// Configurable parameters
+// Configurable parameters (raw ADC units, no conversion)
 static const float DEFAULT_KP = 1.0f;
 static const float DEFAULT_KI = 0.1f;
 static const float DEFAULT_KD = 0.0f;
-static const float MAX_AMPS = 10.0f;       // limit (user requirement)
-static const float SHUTOFF_AMPS = 14.0f;   // immediate shutoff if exceeded
+static const int MAX_ADC_DELTA = 130;      // max ADC delta from zero (corresponds to ~10A)
+static const int SHUTOFF_ADC_DELTA = 182;  // emergency shutoff threshold (corresponds to ~14A)
 
-// ADC calibration defaults (10-bit ADC values) // TODO: use mA rather than A for better precision and non float calculations
+// ADC calibration (10-bit ADC value at zero current)
 static int zeroADC = 513;
-static const float ADC_PER_A_POS = 13.0f;  // +1A => 526 (Δ+13)
-static const float ADC_PER_A_NEG = 14.0f;  // -1A => 499 (Δ-14)
 
 // Sampling & timing // TODO sampling tuning will be handled by register HW config handled in SetupADC() function removed unneccesary values
 static const uint16_t CONTROL_HZ = 240; // default control rate (Hz)
@@ -37,11 +34,10 @@ static float Ki = DEFAULT_KI;
 static float Kd = DEFAULT_KD;
 static float integrator = 0.0f;
 static float lastError = 0.0f;
-static float targetAmps = 0.0f;
+static int targetADC = 0;  // target raw ADC value
 static bool enabled = false;
 
 // Runtime state for status
-static float lastMeasuredAmps = 0.0f;
 static int lastADC = 0;
 static int lastDuty = 0; // scaled for setMotor
 
@@ -62,7 +58,7 @@ void ACS712_begin()
   sampleCount = 0;
   integrator = 0.0f;
   lastError = 0.0f;
-  targetAmps = 0.0f;
+  targetADC = zeroADC;  // default target is zero current (at zeroADC)
   enabled = false;
 }
 
@@ -131,24 +127,7 @@ void ACS712_backgroundTask()
 #endif
 }
 
-static float adcToAmps(int adc)
-{
-  int delta = adc - zeroADC;
-  if (delta >= 0)
-    return (float)delta / ADC_PER_A_POS;
-  else
-    return (float)delta / ADC_PER_A_NEG;
-}
 
-static int ampsToSetMotor(float amps)
-{
-  // Map -MAX_AMPS..MAX_AMPS -> -MAX_SETMOTOR..MAX_SETMOTOR
-  if (amps > MAX_AMPS) amps = MAX_AMPS;
-  if (amps < -MAX_AMPS) amps = -MAX_AMPS;
-  float frac = amps / MAX_AMPS;
-  int val = (int)roundf(frac * (float)MAX_SETMOTOR);
-  return limitVal(val, -MAX_SETMOTOR, MAX_SETMOTOR);
-}
 
 void ACS712_update()
 {
@@ -167,16 +146,16 @@ void ACS712_update()
   }
 
   lastADC = avgADC;
-  // TODO: remove ADC conversions to AMPS, use DIRECT ADC values in control loop for better performance
-  lastMeasuredAmps = adcToAmps(avgADC);
 
-  // Safety: shut down if exceeds SHUTOFF
-  if (abs(lastMeasuredAmps) >= SHUTOFF_AMPS)
+  // Safety: shut down if ADC delta exceeds SHUTOFF threshold
+  int adcDelta = abs(avgADC - zeroADC);
+  if (adcDelta >= SHUTOFF_ADC_DELTA)
   {
     enabled = false;
     setMotor(0);
 #if DEBUG
-    Serial.print("ERR: SHUTOFF measuredA="); Serial.println(lastMeasuredAmps);
+    Serial.print("ERR: SHUTOFF adc="); Serial.print(avgADC);
+    Serial.print(" delta="); Serial.println(adcDelta);
 #endif
     return;
   }
@@ -191,42 +170,42 @@ void ACS712_update()
     return;
   }
 
-  // Control law: PI (no derivative by default)
-  float error = targetAmps - lastMeasuredAmps;
+  // Control law: PI using raw ADC values (no derivative by default)
+  float error = (float)(targetADC - avgADC);
   float dt = (float)CONTROL_INTERVAL_US / 1000000.0f; // seconds
 
   integrator += error * dt;
-  // anti-windup
-  float integLimit = MAX_AMPS * 10.0f; // heuristic
+  // anti-windup: clamp integrator to reasonable range
+  float integLimit = (float)MAX_ADC_DELTA * 10.0f;
   if (integrator > integLimit) integrator = integLimit;
   if (integrator < -integLimit) integrator = -integLimit;
 
   float u = (Kp * error) + (Ki * integrator) - (Kd * ((error - lastError) / dt));
   lastError = error;
 
-  // Desired actuation in amps -> convert to setMotor units
-  // Clamp u to MAX_AMPS range
-  if (u > MAX_AMPS) u = MAX_AMPS;
-  if (u < -MAX_AMPS) u = -MAX_AMPS;
+  // Clamp output to MAX_ADC_DELTA range and convert to motor units
+  if (u > (float)MAX_ADC_DELTA) u = (float)MAX_ADC_DELTA;
+  if (u < -(float)MAX_ADC_DELTA) u = -(float)MAX_ADC_DELTA;
 
-  int motorVal = ampsToSetMotor(u);
+  int motorVal = (int)u;  // direct ADC delta to motor mapping
   lastDuty = motorVal;
 
   // Apply motor with sign convention: setMotor expects signed value
   setMotor(motorVal);
 }
 
-void ACS712_setTargetA(float amps)
+void ACS712_setTargetA(float adcValue)
 {
-  if (amps > MAX_AMPS) amps = MAX_AMPS;
-  if (amps < -MAX_AMPS) amps = -MAX_AMPS;
-  targetAmps = amps;
+  // Accept raw ADC value (0-1024) directly, no conversion
+  targetADC = (int)adcValue;
 }
 
 void ACS712_setTargetFromForce(int8_t force)
 {
-  float frac = (float)force / 255.0f;
-  ACS712_setTargetA(frac * MAX_AMPS);
+  // Map force (-127 to +127) to ADC range around zeroADC TODO: use const mapper Force values are (-255..255)
+  float frac = (float)force / 127.0f;
+  int adcTarget = zeroADC + (int)(frac * (float)MAX_ADC_DELTA);
+  ACS712_setTargetA((float)adcTarget);
 }
 
 void ACS712_enable(bool en)
@@ -317,8 +296,8 @@ void ACS712_processCommand(const char *cmd)
   {
 #if DEBUG
     Serial.print("S adc:"); Serial.print(lastADC);
-    Serial.print(" amps:"); Serial.print(lastMeasuredAmps);
-    Serial.print(" target:"); Serial.print(targetAmps);
+    Serial.print(" delta:"); Serial.print(lastADC - zeroADC);
+    Serial.print(" target:"); Serial.print(targetADC);
     Serial.print(" duty:"); Serial.print(lastDuty);
     Serial.print(" Kp:"); Serial.print(Kp);
     Serial.print(" Ki:"); Serial.println(Ki);
@@ -335,28 +314,6 @@ void ACS712_processCommand(const char *cmd)
   if (strcasecmp(cmd, "CALZ") == 0)
   {
     ACS712_calibrateZero();
-    return;
-  }
-  if (strncasecmp(cmd, "CALP:", 5) == 0)
-  {
-    int v = atoi(cmd + 5); // raw adc for +1A
-    // derive ADC_PER_A_POS from given v and zeroADC
-    if (v != zeroADC)
-    {
-      float slope = (float)(v - zeroADC);
-      if (slope > 0.0f) { /* set adjustable if required */ }
-#if DEBUG
-      Serial.print("OK CALP:"); Serial.println(v);
-#endif
-    }
-    return;
-  }
-  if (strncasecmp(cmd, "CALN:", 5) == 0)
-  {
-    int v = atoi(cmd + 5);
-#if DEBUG
-    Serial.print("OK CALN:"); Serial.println(v);
-#endif
     return;
   }
 
