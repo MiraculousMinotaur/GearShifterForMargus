@@ -23,9 +23,18 @@
 void setup() {
 #if DEBUG
   Serial.begin(9600);
+  DebugManager_init();
 #endif
 
   // Module initializations
+
+
+#if WHEEL
+  Wheel_begin();
+#endif
+#if FFB
+  ACS712_begin();
+#endif
 #if PEDALS
   Pedals_begin();
 #endif
@@ -34,33 +43,27 @@ void setup() {
   Gears_begin();
 #endif
 
-#if WHEEL
-  Wheel_begin();
-#endif
-
-  // ACS712 current-sensor driver
-  ACS712_begin();
 
   // Initialize Joystick Library
   Joystick.begin(true);
 
   // Start the 1ms scheduler and debug manager
-#if FFB
   Scheduler_start();
-#endif
-  DebugManager_init();
+
 }
 
 
-#if FFB
 ISR(TIMER3_COMPA_vect){
   // Minimal ISR: set scheduler flag only. Heavy work happens in main context.
   scheduler_ms_flag = 1;
 }
-#endif
 
 void loop() 
 {
+#if DEBUG
+  delay(100);
+#endif
+
   // Module updates are scheduled by the 1ms Scheduler (see Scheduler_start and scheduler flag handling).
 
   // ACS712 driver background sampling & command processing
@@ -69,10 +72,21 @@ void loop()
   // Scheduler-driven tasks triggered from Timer3 (1ms tick)
   if (scheduler_ms_flag)
   {
-    // clear flag atomically
+    // clear flag and atomically snapshot ADC accumulators
     noInterrupts();
     scheduler_ms_flag = 0;
+    uint16_t currentSum = 0;
+    uint16_t currentCount = 0;
+    // ACS712_snapshotAndClear is non-atomic by design; perform snapshot inside this interrupt-disabled section
+    ACS712_snapshotAndClear(&currentSum, &currentCount);
     interrupts();
+
+    // Apply averaged ADC value if samples were collected
+    if (currentCount > 0)
+    {
+      int avg = (int)(currentSum / currentCount);
+      ACS712_setLastADC(avg);
+    }
 
     static uint16_t schedCounter = 0;
     schedCounter++;

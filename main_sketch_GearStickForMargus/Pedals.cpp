@@ -11,6 +11,9 @@ void Pedals_begin()
 
 void Pedals_update()
 {
+  // Pedals analog reads commented out — pedal inputs will be moved to external ADC over I2C.
+  // Keep logic here for future use; currently no ADC reads to avoid conflicts with free-running ADC.
+  /*
   int pedal = analogRead(ACCELERATOR_PIN);
   pedal = limitVal(pedal, ACCELERATOR_MIN_VALUE, ACCELERATOR_MAX_VALUE);
   Joystick.setAccelerator(pedal);
@@ -22,6 +25,7 @@ void Pedals_update()
   pedal = analogRead(CLUTCH_PIN);
   pedal = limitVal(pedal, CLUTCH_MIN_VALUE, CLUTCH_MAX_VALUE);
   Joystick.setZAxis(pedal);
+  */
 }
 
 #endif // PEDALS

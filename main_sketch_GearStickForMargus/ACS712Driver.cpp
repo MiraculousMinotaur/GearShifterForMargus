@@ -27,8 +27,13 @@ static const int MAX_SETMOTOR = 204; // since setMotor(force) does force*=3 and 
 // Controller state
 static volatile bool controlTick = false; // set by ISR
 static unsigned long lastSampleMicros = 0;
-static int samples[SAMPLES_PER_CYCLE];
-static uint8_t sampleCount = 0;
+// Note: sampling is done in ISR accumulators (adcSum/adcCount). Do not use samples[]/sampleCount.
+// static int samples[SAMPLES_PER_CYCLE];
+// static uint8_t sampleCount = 0;
+
+// ISR accumulators (16-bit as requested)
+static volatile uint16_t adcSum = 0;
+static volatile uint16_t adcCount = 0;
 
 static int16_t Kp_q8 = DEFAULT_KP_Q8;
 static int16_t Ki_q8 = DEFAULT_KI_Q8;
@@ -61,6 +66,15 @@ void ACS712_begin()
   lastError_i = 0;
   targetADC = zeroADC;  // default target is zero current (at zeroADC)
   enabled = false;
+  // Configure and start free-running ADC on ACS712_PIN_SENSE
+  // Derive ADC channel from analog pin macro if available
+#ifdef analogPinToChannel
+  setupADC(analogPinToChannel(ACS712_PIN_SENSE));
+#else
+  // Fallback: assume analog pins A0.. map to channels 0..
+  setupADC(ACS712_PIN_SENSE - A0);
+#endif
+  startADC();
 }
 
 /* TODO: make proper implementation of non-blocking ADC sampling using interrupts
@@ -92,21 +106,10 @@ void setupADC() {
             }
 */
 
-void ACS712_backgroundTask()
+void ACS712_DebugTask()
 {
-  unsigned long now = micros();
-  // Sample periodically so we get SAMPLES_PER_CYCLE samples per control cycle
-  if ((now - lastSampleMicros) >= SAMPLE_INTERVAL_US)
-  {
-    lastSampleMicros = now;
-    if (sampleCount < SAMPLES_PER_CYCLE)
-    {
-      int v = analogRead(ACS712_PIN_SENSE); // TODO: replace blocking read with non-blocking continuous sampling using ADC interrupts
-      // TODO: decide sampling strategy (free-running vs timer-triggered) and document choice
-      samples[sampleCount++] = v;
-      lastADC = v;
-    }
-  }
+  // Background task now only handles serial command parsing and debug work.
+  // ADC sampling is handled by free-running ADC ISR; snapshot is performed in main loop.
 
   // Serial command parsing (only if Serial available)
 #if DEBUG
@@ -126,6 +129,57 @@ void ACS712_backgroundTask()
     }
   }
 #endif
+}
+
+// ADC ISR: accumulate 10-bit ADC results into adcSum and adcCount (keep ISR minimal)
+ISR(ADC_vect)
+{
+  uint16_t v = ADC; // read ADC (10-bit result in 16-bit register)
+  adcSum += v;
+  adcCount++;
+}
+
+// Configure ADC for free-running on given channel (channel = ADC channel number)
+void setupADC(uint8_t channel)
+{
+  // Select AVcc as reference and channel
+  ADMUX = (1 << REFS0) | (channel & 0x0F);
+
+  // Free running: clear ADTS bits
+  ADCSRB &= ~((1 << ADTS2) | (1 << ADTS1) | (1 << ADTS0));
+
+  // Prescaler /128, enable ADC, enable auto trigger and ADC interrupt
+  ADCSRA = (1 << ADEN) | (1 << ADIE) | (1 << ADATE) | (1 << ADPS2) | (1 << ADPS1) | (1 << ADPS0);
+}
+
+void startADC()
+{
+  // Start first conversion (free-running)
+  ADCSRA |= (1 << ADSC);
+}
+
+void stopADC()
+{
+  // Disable ADC conversions and interrupt
+  ADCSRA &= ~((1 << ADEN) | (1 << ADSC) | (1 << ADIE));
+}
+
+// Non-atomic snapshot: copies and clears ISR accumulators. Caller must wrap with noInterrupts()/interrupts() if atomicity required.
+void ACS712_snapshotAndClear(uint16_t *sum, uint16_t *count)
+{
+  if (sum) {
+    *sum = adcSum;
+    adcSum = 0;
+  }
+  if (count) {
+    *count = adcCount;
+    adcCount = 0;
+  }
+}
+
+void ACS712_setLastADC(int v)
+{
+  lastADC = v;
 }
 
 

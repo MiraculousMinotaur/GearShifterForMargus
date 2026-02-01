@@ -7,7 +7,17 @@
 // Public API
 void ACS712_begin();
 void ACS712_update();           // call regularly in loop(), does control when timer ticked
-void ACS712_backgroundTask();   // call in loop() frequently to perform non-blocking sampling and serial parsing
+
+// Debug task (background work can be moved to DebugManager) - optional
+void ACS712_DebugTask();
+// ADC control API for free-running sampling
+void setupADC(uint8_t channel);
+void startADC();
+void stopADC();
+// Non-atomic snapshot helper: copies and clears ISR accumulators. Caller must protect with noInterrupts()/interrupts() if atomicity required.
+void ACS712_snapshotAndClear(uint16_t *sum, uint16_t *count);
+// Set lastADC from caller (used after atomic snapshot)
+void ACS712_setLastADC(int v);
 void ACS712_setTargetA(int adcValue);
 void ACS712_setTargetFromForce(int force); // force in -MAX_FORCES..MAX_FORCES maps to ADC target around zeroADC
 void ACS712_enable(bool en);

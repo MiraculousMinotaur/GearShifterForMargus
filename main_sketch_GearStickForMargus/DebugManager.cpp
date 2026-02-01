@@ -50,5 +50,6 @@ void DebugManager_update(void)
       if (cmdIdx < (sizeof(cmdBuf) - 1)) cmdBuf[cmdIdx++] = c;
     }
   }
+  ACS712_DebugTask();
 #endif
 }
