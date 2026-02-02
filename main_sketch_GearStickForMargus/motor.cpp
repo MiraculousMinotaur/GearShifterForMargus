@@ -1,5 +1,6 @@
 #include "motor.h"
 #include "Config.h"
+#include "Wheel.h"
 #include "Utils.h"
 #include <avr/io.h>
 #include "FixedPoint.h"
@@ -103,12 +104,10 @@ void Motor_selfCenter(int wheelOutput)
   // Internal PID maintained in motor module
   static int lastPosition = 0;
   static int32_t integral_q = 0;
- // TODO: move to .h for configuration
- // TODO: use integer calculation instead of float
-  // Gains in Q8 fixed-point
-  const int16_t Kp_q8 = (int16_t)(0.05 * SCALE_Q8);     // ~13
-  const int16_t Ki_q8 = (int16_t)(0.05 * SCALE_Q8);     // ~13
-  const int16_t Kd_q8 = (int16_t)(0.1  * SCALE_Q8);     // ~26
+  // Gains in Q8 fixed-point (configured in motor.h)
+  const int16_t Kp_q8 = MOTOR_SELFCENTER_KP_Q8;
+  const int16_t Ki_q8 = MOTOR_SELFCENTER_KI_Q8;
+  const int16_t Kd_q8 = MOTOR_SELFCENTER_KD_Q8;
 
   int error = 0 - wheelOutput;
 
@@ -130,7 +129,7 @@ void Motor_selfCenter(int wheelOutput)
   int32_t u = (int32_t)(u_q8 / (int64_t)SCALE_Q8); // back to native units
 
   // Clamp to centering limit
-  int pwmForce = limitVal(u, -MAX_CENTERING_PWM, MAX_CENTERING_PWM);
+  int pwmForce = (int)limitVal<int32_t>(u, -(int32_t)MAX_CENTERING_PWM, (int32_t)MAX_CENTERING_PWM);
 
   setMotor(-pwmForce);
 }

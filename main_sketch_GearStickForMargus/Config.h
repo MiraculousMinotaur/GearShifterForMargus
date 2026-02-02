@@ -17,7 +17,7 @@
 #define ACS712_PIN_SENSE A5
 #define ACS712_PIN_POWER A4
 
-#include <Joystick.h> 
+#include <Joystick.h>
 // Make the global Joystick object accessible from .cpp modules
 extern Joystick_ Joystick;
 

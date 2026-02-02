@@ -65,10 +65,6 @@ void loop()
 #endif
 
   // Module updates are scheduled by the 1ms Scheduler (see Scheduler_start and scheduler flag handling).
-
-  // ACS712 driver background sampling & command processing
-  ACS712_backgroundTask();
-
   // Scheduler-driven tasks triggered from Timer3 (1ms tick)
   if (scheduler_ms_flag)
   {

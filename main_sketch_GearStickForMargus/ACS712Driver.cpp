@@ -10,7 +10,7 @@ static const int16_t DEFAULT_KP_Q8 = (int16_t)(1 * SCALE_Q8); // 1.0 -> 256
 static const int16_t DEFAULT_KI_Q8 = (int16_t)(26); // ~0.1 * 256 = 25.6 -> 26
 static const int16_t DEFAULT_KD_Q8 = (int16_t)(0);
 static const int MAX_ADC_DELTA = 130;      // max ADC delta from zero (corresponds to ~10A)
-static const int SHUTOFF_ADC_DELTA = 182;  // emergency shutoff threshold (corresponds to ~14A)
+static const int SHUTOFF_ADC_DELTA = 156;  // emergency shutoff threshold (corresponds to ~12A)
 
 // ADC calibration (10-bit ADC value at zero current)
 static int zeroADC = 513;
@@ -26,7 +26,6 @@ static const int MAX_SETMOTOR = 204; // since setMotor(force) does force*=3 and 
 
 // Controller state
 static volatile bool controlTick = false; // set by ISR
-static unsigned long lastSampleMicros = 0;
 // Note: sampling is done in ISR accumulators (adcSum/adcCount). Do not use samples[]/sampleCount.
 // static int samples[SAMPLES_PER_CYCLE];
 // static uint8_t sampleCount = 0;
@@ -60,8 +59,11 @@ void ACS712_begin()
   pinMode(ACS712_PIN_POWER, OUTPUT);
   digitalWrite(ACS712_PIN_POWER, HIGH); // power the ACS712 module
   // initialize timers/state
-  lastSampleMicros = micros();
-  sampleCount = 0;
+  // clear ISR accumulators
+  noInterrupts();
+  adcSum = 0;
+  adcCount = 0;
+  interrupts();
   integrator_q = 0;
   lastError_i = 0;
   targetADC = zeroADC;  // default target is zero current (at zeroADC)
@@ -76,35 +78,6 @@ void ACS712_begin()
 #endif
   startADC();
 }
-
-/* TODO: make proper implementation of non-blocking ADC sampling using interrupts
-void setupADC() {
-    // 1. Set Reference to AVcc (5V) and select the channel (e.g., ADC0 / Pin A0)
-    ADMUX = (1 << REFS0); 
-
-    // 2. Set ADC Prescaler to 128 (16MHz / 128 = 125kHz sampling clock)
-    // This is the most accurate speed for the ATmega32U4 ADC.
-    ADCSRA = (1 << ADPS2) | (1 << ADPS1) | (1 << ADPS0);
-
-    // 3. Enable Auto Triggering and the ADC Interrupt
-    ADCSRA |= (1 << ADATE) | (1 << ADIE);
-
-    // 4. Set Auto Trigger source to "Free Running Mode" (bits 2:0 are 0)
-    ADCSRB &= ~((1 << ADTS2) | (1 << ADTS1) | (1 << ADTS0));
-
-    // 5. Enable the ADC and start the first conversion
-    ADCSRA |= (1 << ADEN) | (1 << ADSC);
-    
-    sei(); // Ensure global interrupts are enabled
-}
-*/
-
-/* TODO implement simple ADC ISR for non-blocking sampling
-      * ISR(ADC_vect) {
-            adcSum += ADC; // Add 10-bit result to sum
-            adcCount++;
-            }
-*/
 
 void ACS712_DebugTask()
 {
@@ -182,34 +155,16 @@ void ACS712_setLastADC(int v)
   lastADC = v;
 }
 
-
-
 void ACS712_update()
 {
-  if (!controlTick) return; // nothing to do
-  controlTick = false;
-
-  // Average samples (if none, use lastADC)
-  int avgADC = lastADC;
-  if (sampleCount > 0)
-  {
-    long sum = 0;
-    for (uint8_t i = 0; i < sampleCount; ++i) sum += samples[i];
-    avgADC = (int)(sum / sampleCount);
-    // reset for next cycle
-    sampleCount = 0;
-  }
-
-  lastADC = avgADC;
-
   // Safety: shut down if ADC delta exceeds SHUTOFF threshold
-  int adcDelta = abs(avgADC - zeroADC);
+  int adcDelta = abs(lastADC - zeroADC);
   if (adcDelta >= SHUTOFF_ADC_DELTA)
   {
     enabled = false;
     setMotor(0);
 #if DEBUG
-    Serial.print("ERR: SHUTOFF adc="); Serial.print(avgADC);
+    Serial.print("ERR: SHUTOFF adc="); Serial.print(lastADC);
     Serial.print(" delta="); Serial.println(adcDelta);
 #endif
     return;
@@ -226,7 +181,7 @@ void ACS712_update()
   }
 
   // Control law: PI using raw ADC values (integer fixed-point Q8 gains)
-  int32_t error = (int32_t)targetADC - (int32_t)avgADC; // ADC units
+  int32_t error = (int32_t)targetADC - (int32_t)lastADC; // ADC units
 
   // Integrator (per-control-tick interpretation)
   integrator_q += error;
@@ -296,15 +251,7 @@ void ACS712_setGains_q8(int16_t kp_q8, int16_t ki_q8, int16_t kd_q8)
 
 void ACS712_calibrateZero()
 {
-  // simple immediate average of available samples or single read
-  int v = lastADC;
-  if (sampleCount > 0)
-  {
-    long sum = 0;
-    for (uint8_t i = 0; i < sampleCount; ++i) sum += samples[i];
-    v = (int)(sum / sampleCount);
-  }
-  zeroADC = v;
+  zeroADC = lastADC;
 #if DEBUG
   Serial.print("OK CALZ zeroADC="); Serial.println(zeroADC);
 #endif
