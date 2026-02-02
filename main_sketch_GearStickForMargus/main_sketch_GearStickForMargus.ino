@@ -88,17 +88,16 @@ void loop()
     schedCounter++;
 
     // 1) Every loop: current control trigger (set tick and perform update)
-    ACS712_onTimerTick_ISR();
     ACS712_update();
 
     // 1.2) Every other loop: request FFB/USB processing
-    if ((schedCounter & 1) == 0)
+    if (schedCounter & 1)
     {
       Joystick.getUSBPID();
     }
 
-    // 1.3) Every 10th loop: alternate pedals/gears reads
-    if ((schedCounter % 10) == 0)
+    // 1.3) Every odd tick: alternate pedals/gears reads (offset from USBPID which runs on even ticks)
+    if (schedCounter > 9)
     {
       static bool readPedals = true;
       if (readPedals)
@@ -114,6 +113,7 @@ void loop()
         #endif
       }
       readPedals = !readPedals;
+      schedCounter = 0;
     }
 
     // Wheel update runs each scheduler cycle to update axis and apply FFB/motor targets
