@@ -8,18 +8,25 @@
 
 #if PEDALS
 
-// Pedal Pins
+#include <Adafruit_ADS1X15.h>
+
+// Pedal Pins -- NOTE: These analog pin defines are now unused when using ADS1115 over I2C
+// TODO: Remove once ADS is verified working, or repurpose for direct ADC fallback mode if ADS1115 fails
 #define ACCELERATOR_PIN A1 
 #define BRAKE_PIN A2
 #define CLUTCH_PIN A0
 
-// Pedal Calibration
-#define ACCELERATOR_MIN_VALUE 320
-#define ACCELERATOR_MAX_VALUE 900
-#define BRAKE_MIN_VALUE 60
-#define BRAKE_MAX_VALUE 950
-#define CLUTCH_MIN_VALUE 90
-#define CLUTCH_MAX_VALUE 750
+// Pedal Calibration TODO: Recalibrate for ADS1115
+const int16_t ACCELERATOR_MIN_VALUE 320;
+const int16_t ACCELERATOR_MAX_VALUE 900;
+const int16_t BRAKE_MIN_VALUE 60;
+const int16_t BRAKE_MAX_VALUE 950;
+const int16_t CLUTCH_MIN_VALUE 90;
+const int16_t CLUTCH_MAX_VALUE 750;
+const int16_t PEDALS_REFERENCE_DEFAULT = 13333;  // approximately 2.5v
+
+// Extern ADS1115 instance (defined in Pedals.cpp)
+extern Adafruit_ADS1115 ads;
 
 void Pedals_begin();
 void Pedals_update();

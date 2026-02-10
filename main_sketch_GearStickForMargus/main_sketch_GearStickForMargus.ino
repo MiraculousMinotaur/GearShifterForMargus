@@ -9,6 +9,7 @@
 #include "Pedals.h"
 #include "Scheduler.h"
 #include "DebugManager.h"
+#include <Wire.h>
 
 #if DEBUG
 #define DEBUG_PRINT(...) Serial.print(__VA_ARGS__)
@@ -26,9 +27,34 @@ void setup() {
   DebugManager_init();
 #endif
 
-  // Module initializations
+  // ========== I2C Initialization (for ADS1115 pedals and MCP23017 gears) ==========
+  // Enable external I2C device power supply before initializing I2C bus
+  pinMode(I2C_POWER_ENABLE_PIN, OUTPUT);
+#if I2C_POWER_ENABLE_ACTIVE_HIGH
+  digitalWrite(I2C_POWER_ENABLE_PIN, HIGH);   // Enable power
+#else
+  digitalWrite(I2C_POWER_ENABLE_PIN, LOW);    // Enable power (active-low)
+#endif
+  delay(I2C_POWER_STABILIZE_MS);  // Wait for external devices to stabilize
+  
+  // Initialize I2C bus (Wire library)
+  Wire.begin();
+  
+  // Initialize MCP23017 for gear inputs
+  #if GEARS
+  mcp.begin(MCP23017_I2C_ADDR);
+  #endif
+  
+  // Initialize ADS1115 for pedal analog inputs
+  #if PEDALS
+  ads.begin(ADS1115_I2C_ADDR);
+  ads.setGain(ADS1115_GAIN);
+  ads.setDataRate(ADS1115_DATARATE);
+  
+  // Conversion is started in Pedals_Begin() after calibration values are set
+  #endif
 
-
+  // ========== Module initializations ==========
 #if WHEEL
   Wheel_begin();
 #endif
@@ -38,7 +64,6 @@ void setup() {
 #if PEDALS
   Pedals_begin();
 #endif
-
 #if GEARS
   Gears_begin();
 #endif
@@ -97,22 +122,23 @@ void loop()
     }
 
     // 1.3) Every odd tick: alternate pedals/gears reads (offset from USBPID which runs on even ticks)
-    if (schedCounter > 9)
+    if (schedCounter > 4)
     {
-      static bool readPedals = true;
+      static uint8_t readPedals = 4;
       if (readPedals)
       {
         #if PEDALS
         Pedals_update();
         #endif
+        readPedals--;
       }
       else
       {
         #if GEARS
         Gears_update();
         #endif
+        readPedals = 4; // reset to read pedals for the next 4 cycles
       }
-      readPedals = !readPedals;
       schedCounter = 0;
     }
 
