@@ -49,7 +49,8 @@ void Pedals_update()
 
   // Cycle to the next channel (0 -> 1 -> 2 -> 3 -> 0)
   currentChannel = (currentChannel + 1) & 0b11; // Wraps around 0-3
-  static ads_ref_offset = adsValues[ADS_CH_REF] - PEDALS_REFERENCE_DEFAULT;  // Use reference channel as offset for normalization (if needed)
+  static int16_t ads_ref_offset = 0;
+  ads_ref_offset = adsValues[ADS_CH_REF] - PEDALS_REFERENCE_DEFAULT;  // Use reference channel as offset for normalization (if needed)
   // Start continuous conversion on the next channel for next cycle
   ads.startADCReading(currentChannel, /*multishot=*/true);
 
