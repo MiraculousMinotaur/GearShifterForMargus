@@ -4,7 +4,7 @@
 
 #if WHEEL
 
-volatile int currentPosition = 0;
+volatile int32_t currentPosition = 0;
 bool isOutOfRange = false;
 
 // Encoder pins on PORTD: A=pin2 (bit 2), B=pin3 (bit 3)
@@ -50,8 +50,8 @@ EffectParams effectparams[2];
 
 // Motor actuation moved to motor.cpp (setMotor / Motor_set).
 
-int lastPosition = 0;
-long integral = 0;
+int32_t lastPosition = 0;
+int32_t integral = 0;
 
 // self-centering and PID control moved to Motor_selfCenter() in motor.cpp.
 
@@ -63,45 +63,45 @@ long integral = 0;
 // ramp up towards MAX_PWM. The mapping ensures that raw==0 -> pwm==0,
 // and raw at max -> pwm == MAX_PWM. For any non-zero raw we ensure a
 // minimum perceptible PWM of ~5% of MAX_PWM.
-static int rampForceToPWM(int rawForce)
+static int16_t rampForceToPWM(int16_t rawForce)
 {
-  int maxForce = MAX_FORCES; // expected maximum force magnitude coming from joystick
-  int absForce = rawForce < 0 ? -rawForce : rawForce;
+  int16_t maxForce = MAX_FORCES; // expected maximum force magnitude coming from joystick
+  int16_t absForce = rawForce < 0 ? -rawForce : rawForce;
 
   if (absForce == 0) return 0;
 
-  int minPWM = (MAX_PWM * 5) / 100; // 5% baseline
+  int16_t minPWM = (MAX_PWM * 5) / 100; // 5% baseline
   if (minPWM < 1) minPWM = 1;
 
   // Quadratic scaling (integer-friendly): pwm = minPWM + (abs^2 * (MAX_PWM-minPWM)) / (maxForce^2)
-  long numerator = (long)absForce * (long)absForce * (long)(MAX_PWM - minPWM);
-  long denom = (long)maxForce * (long)maxForce;
-  int scaled = (int)(numerator / (denom + 1));
+  int32_t numerator = (int32_t)absForce * (int32_t)absForce * (int32_t)(MAX_PWM - minPWM);
+  int32_t denom = (int32_t)maxForce * (int32_t)maxForce;
+  int16_t scaled = (int16_t)(numerator / (denom + 1));
 
-  int pwm = minPWM + scaled;
+  int16_t pwm = minPWM + scaled;
   if (pwm > MAX_PWM) pwm = MAX_PWM;
   return pwm;
 }
 
-static int computeEndpointPWM(void)
+static int16_t computeEndpointPWM(void)
 {
   if (currentPosition > ENCODER_MAX_VALUE)
   {
-    int dist = currentPosition - ENCODER_MAX_VALUE;
-    int fullRange = ENCODER_MAX_VALUE - ENCODER_MIN_VALUE;
-    long pwm = ((long)dist * (long)MAX_PWM) / ( (fullRange / ENDPOINT_BAND) + 1 );
+    int32_t dist = currentPosition - ENCODER_MAX_VALUE;
+    int32_t fullRange = ENCODER_MAX_VALUE - ENCODER_MIN_VALUE;
+    int32_t pwm = (dist * (int32_t)MAX_PWM) / ( (fullRange / ENDPOINT_BAND) + 1 );
     if (pwm < (MAX_PWM * 5) / 100) pwm = (MAX_PWM * 5) / 100; // ensure perceptible
     if (pwm > MAX_PWM) pwm = MAX_PWM;
-    return (int)pwm; // positive means we need to push back negative direction in setMotor usage below
+    return (int16_t)pwm; // positive means we need to push back negative direction in setMotor usage below
   }
   else if (currentPosition < ENCODER_MIN_VALUE)
   {
-    int dist = ENCODER_MIN_VALUE - currentPosition;
-    int fullRange = ENCODER_MAX_VALUE - ENCODER_MIN_VALUE;
-    long pwm = ((long)dist * (long)MAX_PWM) / ( (fullRange / ENDPOINT_BAND) + 1 );
+    int32_t dist = ENCODER_MIN_VALUE - currentPosition;
+    int32_t fullRange = ENCODER_MAX_VALUE - ENCODER_MIN_VALUE;
+    int32_t pwm = (dist * (int32_t)MAX_PWM) / ( (fullRange / ENDPOINT_BAND) + 1 );
     if (pwm < (MAX_PWM * 5) / 100) pwm = (MAX_PWM * 5) / 100;
     if (pwm > MAX_PWM) pwm = MAX_PWM;
-    return (int)pwm; // positive means we need to push back positive direction in setMotor usage below
+    return (int16_t)pwm; // positive means we need to push back positive direction in setMotor usage below
   }
 
   return 0;
@@ -135,14 +135,14 @@ void Wheel_begin(void)
 
 void Wheel_update(void)
 {
-  int wheelOutput = limitVal(currentPosition, ENCODER_MIN_VALUE, ENCODER_MAX_VALUE);
-  Joystick.setXAxis(wheelOutput);
+  int32_t wheelOutput = limitVal(currentPosition, (int32_t)ENCODER_MIN_VALUE, (int32_t)ENCODER_MAX_VALUE);
+  Joystick.setXAxis((int)wheelOutput);
 #if FFB
-  effectparams[0].springPosition = wheelOutput;
+  effectparams[0].springPosition = (int)wheelOutput;
   Joystick.setEffectParams(effectparams);
   Joystick.getForce(forces);
   // First, check endpoint breach and apply corrective PWM if needed
-  int endpointPWM = Motor_computeEndpointPWM(wheelOutput);
+  int16_t endpointPWM = Motor_computeEndpointPWM(wheelOutput);
   if (endpointPWM != 0)
   {
     // If position is above max, we want to drive motor negative (back towards center)
@@ -153,11 +153,11 @@ void Wheel_update(void)
   {
     // Normal force path: get the raw force from the Joystick FFB system,
     // map it to a smoother PWM curve and apply with direction.
-    int rawForce = (int)forces[0];
-    int sign = (rawForce < 0) ? -1 : 1;
-    int pwm = Motor_rampForceToPWM(rawForce);
+    int16_t rawForce = (int16_t)forces[0];
+    int16_t sign = (rawForce < 0) ? -1 : 1;
+    int16_t pwm = Motor_rampForceToPWM(rawForce);
     pwm = limitVal(pwm, 0, MAX_PWM);
-    setMotor(- (sign * pwm));
+    setMotor(-(sign * pwm));
   }
 #endif
 }

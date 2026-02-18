@@ -56,14 +56,14 @@ void Pedals_update()
 
   // Update Joystick outputs with constrained raw 16-bit values
   // Constrain each raw value to its calibration range [MIN_VALUE, MAX_VALUE]
-  int accelValue = constrain(adsValues[ADS_CH_ACCEL] - ads_ref_offset, ACCELERATOR_MIN_VALUE, ACCELERATOR_MAX_VALUE);
-  Joystick.setAccelerator(accelValue);
+  int16_t accelValue = constrain(adsValues[ADS_CH_ACCEL] - ads_ref_offset, ACCELERATOR_MIN_VALUE, ACCELERATOR_MAX_VALUE);
+  Joystick.setAccelerator((int)accelValue);
 
-  int brakeValue = constrain(adsValues[ADS_CH_BRAKE] - ads_ref_offset, BRAKE_MIN_VALUE, BRAKE_MAX_VALUE);
-  Joystick.setBrake(brakeValue);
+  int16_t brakeValue = constrain(adsValues[ADS_CH_BRAKE] - ads_ref_offset, BRAKE_MIN_VALUE, BRAKE_MAX_VALUE);
+  Joystick.setBrake((int)brakeValue);
 
-  int clutchValue = constrain(adsValues[ADS_CH_CLUTCH] - ads_ref_offset, CLUTCH_MIN_VALUE, CLUTCH_MAX_VALUE);
-  Joystick.setZAxis(clutchValue);
+  int16_t clutchValue = constrain(adsValues[ADS_CH_CLUTCH] - ads_ref_offset, CLUTCH_MIN_VALUE, CLUTCH_MAX_VALUE);
+  Joystick.setZAxis((int)clutchValue);
   
   // Channel 3 (reference) is read and stored for future use (e.g., calibration, diagnostics)
   // Currently not used in output but available via adsValues[ADS_CH_REF]

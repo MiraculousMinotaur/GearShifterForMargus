@@ -4,7 +4,7 @@
 // Feature flags -- centralized so .cpp/.h files can see the same values as the .ino
 #define DEBUG 1
 #define PEDALS 1
-#define GEARS 0 // TODO: Fix pin conflict between GEARS and WHEEL. Centralize pin definitions and provide alternative pin assignments or disable GEARS by default. Action: add `ACS712_PIN_*` defines and document wiring; verify no pin overlap.
+#define GEARS 1 
 #define WHEEL 1
 #if WHEEL
 #define FFB 1 // FFB currently only effects steering

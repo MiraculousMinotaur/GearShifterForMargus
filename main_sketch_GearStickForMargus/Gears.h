@@ -7,7 +7,7 @@
 
 #if GEARS
 
-#include <Adafruit_MCP23017.h>
+#include <Adafruit_MCP23X17.h>
 
 // MCP23017 Pin Assignments for Gear Inputs
 // NOTE: These are MCP23017 logical pin indices (GPA0-GPA7 = 0-7, GPB0-GPB7 = 8-15)
@@ -45,7 +45,7 @@ enum Buttons_e {
 };
 
 // Extern MCP23017 instance (defined in Gears.cpp)
-extern Adafruit_MCP23017 mcp;
+extern Adafruit_MCP23X17 mcp;
 
 void Gears_begin();
 void Gears_update();

@@ -3,10 +3,11 @@
 
 #include "Config.h"
 #include "Utils.h"
+#include "Pedals.h"
 #include "Gears.h"
 #include "Wheel.h"
 #include "ACS712Driver.h"
-#include "Pedals.h"
+
 #include "Scheduler.h"
 #include "DebugManager.h"
 #include <Wire.h>
@@ -105,7 +106,7 @@ void loop()
     // Apply averaged ADC value if samples were collected
     if (currentCount > 0)
     {
-      int avg = (int)(currentSum / currentCount);
+      uint16_t avg = currentSum / currentCount;
       ACS712_setLastADC(avg);
     }
 

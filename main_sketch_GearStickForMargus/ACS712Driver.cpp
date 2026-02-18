@@ -9,11 +9,11 @@
 static const int16_t DEFAULT_KP_Q8 = (int16_t)(1 * SCALE_Q8); // 1.0 -> 256
 static const int16_t DEFAULT_KI_Q8 = (int16_t)(26); // ~0.1 * 256 = 25.6 -> 26
 static const int16_t DEFAULT_KD_Q8 = (int16_t)(0);
-static const int MAX_ADC_DELTA = 130;      // max ADC delta from zero (corresponds to ~10A)
-static const int SHUTOFF_ADC_DELTA = 156;  // emergency shutoff threshold (corresponds to ~12A)
+static const int16_t MAX_ADC_DELTA = 130;      // max ADC delta from zero (corresponds to ~10A)
+static const int16_t SHUTOFF_ADC_DELTA = 156;  // emergency shutoff threshold (corresponds to ~12A)
 
 // ADC calibration (10-bit ADC value at zero current)
-static int zeroADC = 513;
+static uint16_t zeroADC = 513;
 
 // Sampling & timing // TODO sampling tuning will be handled by register HW config handled in SetupADC() function removed unneccesary values
 static const uint16_t CONTROL_HZ = 240; // default control rate (Hz)
@@ -22,10 +22,9 @@ static const uint8_t SAMPLES_PER_CYCLE = 4;
 static const uint32_t SAMPLE_INTERVAL_US = CONTROL_INTERVAL_US / SAMPLES_PER_CYCLE; // approx spacing
 
 // Motor limits tied to setMotor scaling
-static const int MAX_SETMOTOR = 204; // since setMotor(force) does force*=3 and we want scaled<=614
+static const int16_t MAX_SETMOTOR = 204; // since setMotor(force) does force*=3 and we want scaled<=614
 
 // Controller state
-static volatile bool controlTick = false; // set by ISR
 // Note: sampling is done in ISR accumulators (adcSum/adcCount). Do not use samples[]/sampleCount.
 // static int samples[SAMPLES_PER_CYCLE];
 // static uint8_t sampleCount = 0;
@@ -39,18 +38,12 @@ static int16_t Ki_q8 = DEFAULT_KI_Q8;
 static int16_t Kd_q8 = DEFAULT_KD_Q8;
 static int32_t integrator_q = 0;
 static int16_t lastError_i = 0;
-static int targetADC = 0;  // target raw ADC value
+static uint16_t targetADC = 0;  // target raw ADC value
 static bool enabled = false;
 
 // Runtime state for status
-static int lastADC = 0;
-static int lastDuty = 0; // scaled for setMotor
-
-void ACS712_onTimerTick_ISR()
-{
-  // Very small: simply set the tick flag and let main loop do work
-  controlTick = true;
-}
+static uint16_t lastADC = 0;
+static int16_t lastDuty = 0; // scaled for setMotor
 
 void ACS712_begin()
 {
@@ -150,7 +143,7 @@ void ACS712_snapshotAndClear(uint16_t *sum, uint16_t *count)
   }
 }
 
-void ACS712_setLastADC(int v)
+void ACS712_setLastADC(uint16_t v)
 {
   lastADC = v;
 }
@@ -158,14 +151,14 @@ void ACS712_setLastADC(int v)
 void ACS712_update()
 {
   // Safety: shut down if ADC delta exceeds SHUTOFF threshold
-  int adcDelta = abs(lastADC - zeroADC);
+  int16_t adcDelta = (lastADC > zeroADC) ? (lastADC - zeroADC) : (zeroADC - lastADC);
   if (adcDelta >= SHUTOFF_ADC_DELTA)
   {
     enabled = false;
     setMotor(0);
 #if DEBUG
-    Serial.print("ERR: SHUTOFF adc="); Serial.print(lastADC);
-    Serial.print(" delta="); Serial.println(adcDelta);
+    Serial.print("ERR: SHUTOFF adc="); Serial.print((int)lastADC);
+    Serial.print(" delta="); Serial.println((int)adcDelta);
 #endif
     return;
   }
@@ -205,30 +198,30 @@ void ACS712_update()
   if (u > MAX_ADC_DELTA) u = MAX_ADC_DELTA;
   if (u < -MAX_ADC_DELTA) u = -MAX_ADC_DELTA;
 
-  int motorVal = (int)u;  // direct ADC delta to motor mapping
+  int16_t motorVal = (int16_t)u;  // direct ADC delta to motor mapping
   lastDuty = motorVal;
 
   // Apply motor with sign convention: setMotor expects signed value
   setMotor(motorVal);
 }
 
-void ACS712_setTargetA(int adcValue)
+void ACS712_setTargetA(uint16_t adcValue)
 {
   // Accept raw ADC value (0-1024) directly, no conversion
   targetADC = adcValue;
 }
 
-void ACS712_setTargetFromForce(int force)
+void ACS712_setTargetFromForce(int16_t force)
 {
   // Map force (-MAX_FORCES .. +MAX_FORCES) to ADC range around zeroADC
   // integer mapping: adcTarget = zeroADC + force * MAX_ADC_DELTA / MAX_FORCES
 #if defined(MAX_FORCES)
-  int adcTarget = zeroADC + ((int)force * MAX_ADC_DELTA) / MAX_FORCES;
+  int32_t adcTarget = (int32_t)zeroADC + (((int32_t)force * (int32_t)MAX_ADC_DELTA) / (int32_t)MAX_FORCES);
 #else
   // fallback to 127 if MAX_FORCES not defined
-  int adcTarget = zeroADC + ((int)force * MAX_ADC_DELTA) / 127;
+  int32_t adcTarget = (int32_t)zeroADC + (((int32_t)force * (int32_t)MAX_ADC_DELTA) / 127);
 #endif
-  ACS712_setTargetA(adcTarget);
+  ACS712_setTargetA((uint16_t)adcTarget);
 }
 
 void ACS712_enable(bool en)
@@ -262,10 +255,10 @@ void ACS712_processCommand(const char *cmd)
   if (cmd == nullptr) return;
   if (strncasecmp(cmd, "T:", 2) == 0)
   {
-    int v = atoi(cmd + 2);
+    uint16_t v = (uint16_t)atoi(cmd + 2);
     ACS712_setTargetA(v);
 #if DEBUG
-    Serial.print("OK T:"); Serial.println(v);
+    Serial.print("OK T:"); Serial.println((int)v);
 #endif
     return;
   }
@@ -315,10 +308,10 @@ void ACS712_processCommand(const char *cmd)
   if (strcasecmp(cmd, "S") == 0)
   {
 #if DEBUG
-    Serial.print("S adc:"); Serial.print(lastADC);
-    Serial.print(" delta:"); Serial.print(lastADC - zeroADC);
-    Serial.print(" target:"); Serial.print(targetADC);
-    Serial.print(" duty:"); Serial.print(lastDuty);
+    Serial.print("S adc:"); Serial.print((int)lastADC);
+    Serial.print(" delta:"); Serial.print((int)(lastADC - zeroADC));
+    Serial.print(" target:"); Serial.print((int)targetADC);
+    Serial.print(" duty:"); Serial.print((int)lastDuty);
     Serial.print(" Kp_q8:"); Serial.print((int)Kp_q8);
     Serial.print(" Ki_q8:"); Serial.println((int)Ki_q8);
 #endif
@@ -327,7 +320,7 @@ void ACS712_processCommand(const char *cmd)
   if (strcasecmp(cmd, "RAW") == 0)
   {
 #if DEBUG
-    Serial.print("RAW adc:"); Serial.println(lastADC);
+    Serial.print("RAW adc:"); Serial.println((int)lastADC);
 #endif
     return;
   }

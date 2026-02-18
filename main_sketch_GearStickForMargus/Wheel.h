@@ -19,7 +19,7 @@
 #define ENCODER_MAX_VALUE 3600
 
 // Expose position for diagnostics
-extern volatile int currentPosition;
+extern volatile int32_t currentPosition;
 
 #if FFB
 // Motor Pins
@@ -33,7 +33,7 @@ extern volatile int currentPosition;
 #endif
 
 #if FFB
-void setMotor(int force);
+void setMotor(int16_t force);
 #endif
 
 void Wheel_begin();

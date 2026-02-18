@@ -32,7 +32,7 @@ static inline bool readPinFromMask(uint16_t mask, uint8_t pinIndex)
 static void handleGear(bool &currentlyActive, uint8_t &prevState, const uint8_t *pins, size_t pinCount, Buttons_e firstButton, uint16_t gpioMask)
 {
   currentlyActive = false;
-  for (int i = (int)pinCount - 1; i >= 0; --i)
+  for (int8_t i = (int8_t)pinCount - 1; i >= 0; --i)
   {
     if (!readPinFromMask(gpioMask, pins[i]))  // active low (bit = 0 means active)
     {
@@ -55,9 +55,9 @@ static void handleGear(bool &currentlyActive, uint8_t &prevState, const uint8_t 
 
   if (!currentlyActive)
   {
-    for (int i = (int)firstButton; i < (int)firstButton + (int)pinCount; ++i)
+    for (int16_t i = (int16_t)firstButton; i < (int16_t)firstButton + (int16_t)pinCount; ++i)
     {
-      Joystick.releaseButton(i);
+      Joystick.releaseButton((uint8_t)i);
     }
     prevState = 0;
   }

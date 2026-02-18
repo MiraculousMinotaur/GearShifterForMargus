@@ -19,10 +19,10 @@ static inline q8_t parse_fixed_q8(const char *s)
   bool neg = false;
   if (*s == '+') ++s;
   if (*s == '-') { neg = true; ++s; }
-  long intPart = 0;
+  int32_t intPart = 0;
   while (*s >= '0' && *s <= '9') { intPart = intPart * 10 + (*s - '0'); ++s; }
-  long fracPart = 0;
-  int fracLen = 0;
+  int32_t fracPart = 0;
+  uint8_t fracLen = 0;
   if (*s == '.') {
     ++s;
     while (*s >= '0' && *s <= '9' && fracLen < 4) { // limit fractional digits
@@ -30,11 +30,11 @@ static inline q8_t parse_fixed_q8(const char *s)
     }
   }
   // Compose Q8 value: intPart * 256 + fractional scaled
-  long value = intPart * SCALE_Q8;
+  int32_t value = intPart * SCALE_Q8;
   if (fracLen > 0) {
-    long divisor = 1;
-    for (int i = 0; i < fracLen; ++i) divisor *= 10;
-    long fracScaled = (fracPart * SCALE_Q8) / divisor;
+    int32_t divisor = 1;
+    for (uint8_t i = 0; i < fracLen; ++i) divisor *= 10;
+    int32_t fracScaled = (fracPart * SCALE_Q8) / divisor;
     value += fracScaled;
   }
   if (neg) value = -value;
