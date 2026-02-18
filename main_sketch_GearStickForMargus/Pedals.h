@@ -28,6 +28,10 @@ extern Adafruit_ADS1115 ads;
 void Pedals_begin();
 void Pedals_update();
 
+// Debug report function (opaque pointer, actual type defined in DebugManager.h)
+struct DebugTelemetry_t;
+void Pedals_reportDebug(struct DebugTelemetry_t *tel);
+
 #endif // PEDALS
 
 #endif // PEDALS_H

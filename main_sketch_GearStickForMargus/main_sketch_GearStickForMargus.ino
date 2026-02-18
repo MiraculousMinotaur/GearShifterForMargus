@@ -23,7 +23,7 @@
 
 void setup() {
 #if DEBUG
-  Serial.begin(9600);
+  Serial.begin(115200);
   DebugManager_init();
 #endif
 
@@ -85,10 +85,6 @@ ISR(TIMER3_COMPA_vect){
 
 void loop() 
 {
-#if DEBUG
-  delay(100);
-#endif
-
   // Module updates are scheduled by the 1ms Scheduler (see Scheduler_start and scheduler flag handling).
   // Scheduler-driven tasks triggered from Timer3 (1ms tick)
   if (scheduler_ms_flag)

@@ -4,6 +4,7 @@
 #include "Utils.h"
 #include "motor.h"
 #include "FixedPoint.h"
+#include "DebugManager.h"
 
 // Configurable parameters (raw ADC units, no conversion)
 static const int16_t DEFAULT_KP_Q8 = (int16_t)(1 * SCALE_Q8); // 1.0 -> 256
@@ -72,31 +73,6 @@ void ACS712_begin()
   startADC();
 }
 
-void ACS712_DebugTask()
-{
-  // Background task now only handles serial command parsing and debug work.
-  // ADC sampling is handled by free-running ADC ISR; snapshot is performed in main loop.
-
-  // Serial command parsing (only if Serial available)
-#if DEBUG
-  static char cmdBuf[32];
-  static uint8_t cmdIdx = 0;
-  while (Serial.available())
-  {
-    char c = Serial.read();
-    if (c == '\r' || c == '\n') {
-      if (cmdIdx > 0) {
-        cmdBuf[cmdIdx] = '\0';
-        ACS712_processCommand(cmdBuf);
-        cmdIdx = 0;
-      }
-    } else {
-      if (cmdIdx < (sizeof(cmdBuf) - 1)) cmdBuf[cmdIdx++] = c;
-    }
-  }
-#endif
-}
-
 // ADC ISR: accumulate 10-bit ADC results into adcSum and adcCount (keep ISR minimal)
 ISR(ADC_vect)
 {
@@ -156,10 +132,8 @@ void ACS712_update()
   {
     enabled = false;
     setMotor(0);
-#if DEBUG
     Serial.print("ERR: SHUTOFF adc="); Serial.print((int)lastADC);
     Serial.print(" delta="); Serial.println((int)adcDelta);
-#endif
     return;
   }
 
@@ -237,100 +211,27 @@ bool ACS712_isEnabled()
 
 void ACS712_setGains_q8(int16_t kp_q8, int16_t ki_q8, int16_t kd_q8)
 {
-  Kp_q8 = kp_q8;
-  Ki_q8 = ki_q8;
-  Kd_q8 = kd_q8;
+  // -1 means don't change that parameter
+  if (kp_q8 >= 0) Kp_q8 = kp_q8;
+  if (ki_q8 >= 0) Ki_q8 = ki_q8;
+  if (kd_q8 >= 0) Kd_q8 = kd_q8;
 }
 
 void ACS712_calibrateZero()
 {
   zeroADC = lastADC;
-#if DEBUG
-  Serial.print("OK CALZ zeroADC="); Serial.println(zeroADC);
-#endif
 }
 
-void ACS712_processCommand(const char *cmd)
+// ===== Debug Report Function =====
+void ACS712_reportDebug(struct DebugTelemetry_t *tel)
 {
-  if (cmd == nullptr) return;
-  if (strncasecmp(cmd, "T:", 2) == 0)
-  {
-    uint16_t v = (uint16_t)atoi(cmd + 2);
-    ACS712_setTargetA(v);
-#if DEBUG
-    Serial.print("OK T:"); Serial.println((int)v);
-#endif
-    return;
+  if (tel) {
+    tel->acs_raw_adc = lastADC;
+    tel->acs_delta = (int16_t)((int32_t)lastADC - (int32_t)zeroADC);
+    tel->acs_target = targetADC;
+    tel->acs_current_duty = lastDuty;
+    tel->acs_kp_q8 = Kp_q8;
+    tel->acs_ki_q8 = Ki_q8;
+    tel->acs_kd_q8 = Kd_q8;
   }
-  if (strncasecmp(cmd, "Kp:", 3) == 0)
-  {
-    q8_t v = parse_fixed_q8(cmd + 3);
-    Kp_q8 = v;
-#if DEBUG
-    Serial.print("OK Kp_q8:"); Serial.println((int)Kp_q8);
-#endif
-    return;
-  }
-  if (strncasecmp(cmd, "Ki:", 3) == 0)
-  {
-    q8_t v = parse_fixed_q8(cmd + 3);
-    Ki_q8 = v;
-#if DEBUG
-    Serial.print("OK Ki_q8:"); Serial.println((int)Ki_q8);
-#endif
-    return;
-  }
-  if (strncasecmp(cmd, "Kd:", 3) == 0)
-  {
-    q8_t v = parse_fixed_q8(cmd + 3);
-    Kd_q8 = v;
-#if DEBUG
-    Serial.print("OK Kd_q8:"); Serial.println((int)Kd_q8);
-#endif
-    return;
-  }
-  if (strcasecmp(cmd, "EN") == 0)
-  {
-    ACS712_enable(true);
-#if DEBUG
-    Serial.println("OK EN");
-#endif
-    return;
-  }
-  if (strcasecmp(cmd, "DIS") == 0)
-  {
-    ACS712_enable(false);
-#if DEBUG
-    Serial.println("OK DIS");
-#endif
-    return;
-  }
-  if (strcasecmp(cmd, "S") == 0)
-  {
-#if DEBUG
-    Serial.print("S adc:"); Serial.print((int)lastADC);
-    Serial.print(" delta:"); Serial.print((int)(lastADC - zeroADC));
-    Serial.print(" target:"); Serial.print((int)targetADC);
-    Serial.print(" duty:"); Serial.print((int)lastDuty);
-    Serial.print(" Kp_q8:"); Serial.print((int)Kp_q8);
-    Serial.print(" Ki_q8:"); Serial.println((int)Ki_q8);
-#endif
-    return;
-  }
-  if (strcasecmp(cmd, "RAW") == 0)
-  {
-#if DEBUG
-    Serial.print("RAW adc:"); Serial.println((int)lastADC);
-#endif
-    return;
-  }
-  if (strcasecmp(cmd, "CALZ") == 0)
-  {
-    ACS712_calibrateZero();
-    return;
-  }
-
-#if DEBUG
-  Serial.print("ERR Unknown: "); Serial.println(cmd);
-#endif
 }

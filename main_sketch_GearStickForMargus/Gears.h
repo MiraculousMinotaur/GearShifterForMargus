@@ -50,6 +50,10 @@ extern Adafruit_MCP23X17 mcp;
 void Gears_begin();
 void Gears_update();
 
+// Debug report function (opaque pointer, actual type defined in DebugManager.h)
+struct DebugTelemetry_t;
+void Gears_reportDebug(struct DebugTelemetry_t *tel);
+
 #endif // GEARS
 
 #endif // GEARS_H

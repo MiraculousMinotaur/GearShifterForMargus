@@ -1,6 +1,7 @@
 #include "Wheel.h"
 #include "Config.h"
 #include "motor.h"
+#include "DebugManager.h"
 
 #if WHEEL
 
@@ -160,6 +161,14 @@ void Wheel_update(void)
     setMotor(-(sign * pwm));
   }
 #endif
+}
+
+// ===== Debug Report Function =====
+void Wheel_reportDebug(struct DebugTelemetry_t *tel)
+{
+  if (tel) {
+    tel->wheel_position = currentPosition;
+  }
 }
 
 #endif // WHEEL

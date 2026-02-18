@@ -3,6 +3,8 @@
 
 #if GEARS
 
+#include "DebugManager.h"
+
 // MCP23017 instance (using I2C)
 Adafruit_MCP23X17 mcp;
 
@@ -98,6 +100,14 @@ void Gears_update()
   handleGear(inImpulse, prevImpulseState, ImpulsePins, sizeof(ImpulsePins)/sizeof(ImpulsePins[0]), IMPULSE_1, lastGPIOAB);
   handleGear(inMode, prevModeState, ModePins, sizeof(ModePins)/sizeof(ModePins[0]), REVERSE, lastGPIOAB);
   handleGear(inGear, prevGearState, SixWayPins, sizeof(SixWayPins)/sizeof(SixWayPins[0]), NORMAL_1, lastGPIOAB);
+}
+
+// ===== Debug Report Function =====
+void Gears_reportDebug(struct DebugTelemetry_t *tel)
+{
+  if (tel) {
+    tel->gears_gpio = lastGPIOAB;
+  }
 }
 
 #endif // GEARS

@@ -2,6 +2,8 @@
 
 #if PEDALS
 
+#include "DebugManager.h"
+
 // ADS1115 instance (using I2C)
 Adafruit_ADS1115 ads;
 
@@ -67,6 +69,17 @@ void Pedals_update()
   
   // Channel 3 (reference) is read and stored for future use (e.g., calibration, diagnostics)
   // Currently not used in output but available via adsValues[ADS_CH_REF]
+}
+
+// ===== Debug Report Function =====
+void Pedals_reportDebug(struct DebugTelemetry_t *tel)
+{
+  if (tel) {
+    tel->pedals_accel = adsValues[ADS_CH_ACCEL];
+    tel->pedals_brake = adsValues[ADS_CH_BRAKE];
+    tel->pedals_clutch = adsValues[ADS_CH_CLUTCH];
+    tel->pedals_vref = adsValues[ADS_CH_REF];
+  }
 }
 
 #endif // PEDALS

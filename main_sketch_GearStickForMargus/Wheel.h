@@ -39,6 +39,10 @@ void setMotor(int16_t force);
 void Wheel_begin();
 void Wheel_update();
 
+// Debug report function (opaque pointer, actual type defined in DebugManager.h)
+struct DebugTelemetry_t;
+void Wheel_reportDebug(struct DebugTelemetry_t *tel);
+
 #endif // WHEEL
 
 #endif // WHEEL_H
