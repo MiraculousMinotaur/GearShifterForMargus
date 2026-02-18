@@ -11,8 +11,9 @@
 #if WHEEL
 
 // Encoder Pins
-#define ENCODER_PIN_A 2
-#define ENCODER_PIN_B 3
+// moved to use Serial1 / INT-capable pins per user
+#define ENCODER_PIN_A 0  // Note: if only 1 interrupt is to be used PIN 7 and 6 are also options as 7 supports external interrupts.
+#define ENCODER_PIN_B 1
 // Encoder Limits
 #define ENCODER_MIN_VALUE -3600 // One Full rotation is 2400
 #define ENCODER_MAX_VALUE 3600

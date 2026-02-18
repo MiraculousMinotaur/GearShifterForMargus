@@ -10,11 +10,8 @@
 
 #include <Adafruit_ADS1X15.h>
 
-// Pedal Pins -- NOTE: These analog pin defines are now unused when using ADS1115 over I2C
-// TODO: Remove once ADS is verified working, or repurpose for direct ADC fallback mode if ADS1115 fails
-#define ACCELERATOR_PIN A1 
-#define BRAKE_PIN A2
-#define CLUTCH_PIN A0
+// Pedal Pins: using external ADS1115 channels; MCU analog fallback removed
+// (ADS1115 channels used: ADS_CH_ACCEL/1/2 defined in Config.h)
 
 // Pedal Calibration TODO: Recalibrate for ADS1115
 const int16_t ACCELERATOR_MIN_VALUE = 320;

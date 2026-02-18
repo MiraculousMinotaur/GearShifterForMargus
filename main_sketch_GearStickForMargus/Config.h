@@ -35,7 +35,7 @@
 #define MCP_GEAR_IMPULSE_FIRST_PIN 8   // MCP pins 8-9 for impulse switches (GPB0-GPB1)
 
 // I2C Power Control
-#define I2C_POWER_ENABLE_PIN 4         // Digital pin (D4) to enable external I2C device power supply
+#define I2C_POWER_ENABLE_PIN 8         // Digital pin (D8) to enable external I2C device power supply
 #define I2C_POWER_ENABLE_ACTIVE_HIGH 1 // Set to 1 if driving pin HIGH enables power; set 0 for active-low
 #define I2C_POWER_STABILIZE_MS 50      // Delay (ms) after enabling I2C power before initializing devices
 
