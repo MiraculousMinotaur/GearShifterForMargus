@@ -4,7 +4,7 @@
 #if GEARS
 
 // MCP23017 instance (using I2C)
-Adafruit_MCP23017 mcp;
+Adafruit_MCP23X17 mcp;
 
 const uint8_t SixWayPins[] = {SIX_WAY_PIN_1, SIX_WAY_PIN_2, SIX_WAY_PIN_3, SIX_WAY_PIN_4, SIX_WAY_PIN_5, SIX_WAY_PIN_6};
 const uint8_t ModePins[] = {MODE_PIN_1, MODE_PIN_2};
@@ -71,18 +71,15 @@ void Gears_begin()
   // Configure all used MCP pins as inputs with internal pull-ups
   for (size_t i = 0; i < sizeof(SixWayPins)/sizeof(SixWayPins[0]); ++i) 
   {
-    mcp.pinMode(SixWayPins[i], INPUT);
-    mcp.pullUp(SixWayPins[i], HIGH);  // Enable internal pull-up
+    mcp.pinMode(SixWayPins[i], INPUT_PULLUP);  // Enable internal pull-up
   }
   for (size_t i = 0; i < sizeof(ModePins)/sizeof(ModePins[0]); ++i)
   {
-    mcp.pinMode(ModePins[i], INPUT);
-    mcp.pullUp(ModePins[i], HIGH);
+    mcp.pinMode(ModePins[i], INPUT_PULLUP);
   }
   for (size_t i = 0; i < sizeof(ImpulsePins)/sizeof(ImpulsePins[0]); ++i)
   {
-    mcp.pinMode(ImpulsePins[i], INPUT);
-    mcp.pullUp(ImpulsePins[i], HIGH);
+    mcp.pinMode(ImpulsePins[i], INPUT_PULLUP);
   }
   
   // Read initial state

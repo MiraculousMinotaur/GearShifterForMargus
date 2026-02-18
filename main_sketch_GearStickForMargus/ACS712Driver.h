@@ -17,9 +17,9 @@ void stopADC();
 // Non-atomic snapshot helper: copies and clears ISR accumulators. Caller must protect with noInterrupts()/interrupts() if atomicity required.
 void ACS712_snapshotAndClear(uint16_t *sum, uint16_t *count);
 // Set lastADC from caller (used after atomic snapshot)
-void ACS712_setLastADC(int v);
-void ACS712_setTargetA(int adcValue);
-void ACS712_setTargetFromForce(int force); // force in -MAX_FORCES..MAX_FORCES maps to ADC target around zeroADC
+void ACS712_setLastADC(uint16_t v);
+void ACS712_setTargetA(int16_t adcValue);
+void ACS712_setTargetFromForce(int16_t force); // force in -MAX_FORCES..MAX_FORCES maps to ADC target around zeroADC
 void ACS712_enable(bool en);
 bool ACS712_isEnabled();
 // Set gains in Q8 fixed-point: value * 256. e.g. kp=1.0 -> 256

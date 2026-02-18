@@ -3,11 +3,10 @@
 
 #include "Config.h"
 #include "Utils.h"
-#include "Pedals.h"
 #include "Gears.h"
 #include "Wheel.h"
 #include "ACS712Driver.h"
-
+#include "Pedals.h"
 #include "Scheduler.h"
 #include "DebugManager.h"
 #include <Wire.h>
@@ -43,7 +42,7 @@ void setup() {
   
   // Initialize MCP23017 for gear inputs
   #if GEARS
-  mcp.begin(MCP23017_I2C_ADDR);
+  mcp.begin_I2C(MCP23017_I2C_ADDR);
   #endif
   
   // Initialize ADS1115 for pedal analog inputs
