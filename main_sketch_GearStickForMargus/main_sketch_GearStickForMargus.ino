@@ -8,7 +8,9 @@
 #include "ACS712Driver.h"
 #include "Pedals.h"
 #include "Scheduler.h"
+#if DEBUG
 #include "DebugManager.h"
+#endif
 #include <Wire.h>
 
 #if DEBUG
@@ -144,6 +146,8 @@ void loop()
     #endif
 
     // 1.4) Debug manager at end of cycle
+  #if DEBUG
     DebugManager_update();
+  #endif
   }
 }

@@ -40,8 +40,10 @@ void Wheel_begin();
 void Wheel_update();
 
 // Debug report function (opaque pointer, actual type defined in DebugManager.h)
+#if DEBUG
 struct DebugTelemetry_t;
 void Wheel_reportDebug(struct DebugTelemetry_t *tel);
+#endif
 
 #endif // WHEEL
 

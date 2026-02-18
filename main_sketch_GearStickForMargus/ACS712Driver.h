@@ -26,7 +26,9 @@ void ACS712_setGains_q8(int16_t kp_q8, int16_t ki_q8, int16_t kd_q8);
 void ACS712_calibrateZero();
 
 // Debug report: populate telemetry struct
+#if DEBUG
 struct DebugTelemetry_t;
 void ACS712_reportDebug(struct DebugTelemetry_t *tel);
+#endif
 
 #endif // ACS712DRIVER_H

@@ -24,10 +24,12 @@ struct DebugTelemetry_t {
 typedef struct DebugTelemetry_t DebugTelemetry_t;
 
 // ===== API Functions =====
+#if DEBUG
 void DebugManager_init(void);
 void DebugManager_update(void);
 
 // Get current telemetry buffer (read-only)
 const DebugTelemetry_t* DebugManager_getTelemetry(void);
+#endif // DEBUG
 
 #endif // DEBUGMANAGER_H

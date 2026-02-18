@@ -4,7 +4,7 @@
 // Feature flags -- centralized so .cpp/.h files can see the same values as the .ino
 #define DEBUG 1
 #define PEDALS 1
-#define GEARS 1 
+#define GEARS 1
 #define WHEEL 1
 #if WHEEL
 #define FFB 1 // FFB currently only effects steering

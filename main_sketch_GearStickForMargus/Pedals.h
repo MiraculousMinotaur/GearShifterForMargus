@@ -29,8 +29,10 @@ void Pedals_begin();
 void Pedals_update();
 
 // Debug report function (opaque pointer, actual type defined in DebugManager.h)
+#if DEBUG
 struct DebugTelemetry_t;
 void Pedals_reportDebug(struct DebugTelemetry_t *tel);
+#endif
 
 #endif // PEDALS
 

@@ -103,11 +103,13 @@ void Gears_update()
 }
 
 // ===== Debug Report Function =====
+#if DEBUG
 void Gears_reportDebug(struct DebugTelemetry_t *tel)
 {
   if (tel) {
     tel->gears_gpio = lastGPIOAB;
   }
 }
+#endif
 
 #endif // GEARS

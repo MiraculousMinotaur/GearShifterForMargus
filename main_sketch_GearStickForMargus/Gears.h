@@ -51,8 +51,10 @@ void Gears_begin();
 void Gears_update();
 
 // Debug report function (opaque pointer, actual type defined in DebugManager.h)
+#if DEBUG
 struct DebugTelemetry_t;
 void Gears_reportDebug(struct DebugTelemetry_t *tel);
+#endif
 
 #endif // GEARS
 

@@ -164,11 +164,13 @@ void Wheel_update(void)
 }
 
 // ===== Debug Report Function =====
+#if DEBUG
 void Wheel_reportDebug(struct DebugTelemetry_t *tel)
 {
   if (tel) {
     tel->wheel_position = currentPosition;
   }
 }
+#endif
 
 #endif // WHEEL

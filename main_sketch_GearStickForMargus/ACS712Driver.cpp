@@ -223,6 +223,7 @@ void ACS712_calibrateZero()
 }
 
 // ===== Debug Report Function =====
+#if DEBUG
 void ACS712_reportDebug(struct DebugTelemetry_t *tel)
 {
   if (tel) {
@@ -235,3 +236,4 @@ void ACS712_reportDebug(struct DebugTelemetry_t *tel)
     tel->acs_kd_q8 = Kd_q8;
   }
 }
+#endif

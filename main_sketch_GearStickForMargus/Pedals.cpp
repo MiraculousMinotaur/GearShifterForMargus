@@ -72,6 +72,7 @@ void Pedals_update()
 }
 
 // ===== Debug Report Function =====
+#if DEBUG
 void Pedals_reportDebug(struct DebugTelemetry_t *tel)
 {
   if (tel) {
@@ -81,5 +82,6 @@ void Pedals_reportDebug(struct DebugTelemetry_t *tel)
     tel->pedals_vref = adsValues[ADS_CH_REF];
   }
 }
+#endif
 
 #endif // PEDALS

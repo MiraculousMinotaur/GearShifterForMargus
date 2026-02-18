@@ -1,11 +1,11 @@
 #include "DebugManager.h"
 #include "Config.h"
+#if DEBUG
 #include "ACS712Driver.h"
 #include "Wheel.h"
 #include "Pedals.h"
 #include "Gears.h"
 #include "motor.h"
-#if DEBUG
 #include <Arduino.h>
 #include <string.h>
 
@@ -19,8 +19,6 @@ static uint8_t cmdIdx = 0;
 // CSV output timing (in milliseconds)
 static const uint32_t CSV_OUTPUT_INTERVAL_MS = 500;  // Output CSV every 500ms
 static uint32_t lastCsvTime = 0;
-
-#endif
 
 // ===== Module ReportDebug() function declarations =====
 // These must be defined in each module. They populate the telemetry buffer.
@@ -82,7 +80,6 @@ static void outputCSVTelemetry(void)
 }
 
 // ===== Command Processing =====
-#if DEBUG
 static void processCommand(const char *cmd)
 {
   // Commands:
@@ -168,11 +165,9 @@ static void processCommand(const char *cmd)
     Serial.println(cmd);
   }
 }
-#endif
 
 void DebugManager_update(void)
 {
-#if DEBUG
   // === Handle serial input (non-blocking) ===
   while (Serial.available())
   {
@@ -213,6 +208,5 @@ void DebugManager_update(void)
     lastCsvTime = now;
     outputCSVTelemetry();
   }
-
-#endif
 }
+#endif // DEBUG
