@@ -27,10 +27,10 @@
 #define ADS_CH_BRAKE 0                       // ADS1115 channel 0 (A0) -> Brake
 #define ADS_CH_CLUTCH 2                      // ADS1115 channel 2 (A2) -> Clutch
 // MCP23017 -- GPIO Expander for gear inputs (10 inputs total: 6 six-way + 2 mode + 2 impulse)
-#define MCP23017_I2C_ADDR 0x20         // Default MCP23017 address (all ADDR pins low)
-#define MCP_GEAR_SIXWAY_FIRST_PIN 0    // MCP pins 0-5 for six-way switches (GPA0-GPA5)
-#define MCP_GEAR_MODE_FIRST_PIN 6      // MCP pins 6-7 for mode switches (GPA6-GPA7)
-#define MCP_GEAR_IMPULSE_FIRST_PIN 8   // MCP pins 8-9 for impulse switches (GPB0-GPB1)
+#define MCP23017_I2C_ADDR 0x20          // Default MCP23017 address (all ADDR pins low)
+#define MCP_GEAR_SIXWAY_FIRST_PIN 2     // MCP pins 0-5 for six-way switches (GPA0-GPA5)
+#define MCP_GEAR_MODE_FIRST_PIN 8       // MCP pins 6-7 for mode switches (GPA6-GPA7)
+#define MCP_GEAR_IMPULSE_FIRST_PIN 14   // MCP pins 8-9 for impulse switches (GPB0-GPB1)
 
 // I2C Power Control
 #define I2C_POWER_ENABLE_PIN 8         // Digital pin (D8) to enable external I2C device power supply

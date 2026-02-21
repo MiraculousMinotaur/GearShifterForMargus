@@ -69,9 +69,13 @@ void Gears_begin()
 {
   // MCP23017 is already initialized in main_sketch setup via I2C power enable and Wire.begin()
   // This function is called after device initialization, so mcp.begin() has already been called.
-  
+  //set all MCP pins as inputs with pull-ups (active-low logic for gear switches)
+  for (size_t i = 0; i < 16; ++i) 
+  {
+    mcp.pinMode(i INPUT_PULLUP);  // Enable internal pull-up
+  }
   // Configure all used MCP pins as inputs with internal pull-ups
-  for (size_t i = 0; i < sizeof(SixWayPins)/sizeof(SixWayPins[0]); ++i) 
+  /*for (size_t i = 0; i < sizeof(SixWayPins)/sizeof(SixWayPins[0]); ++i) 
   {
     mcp.pinMode(SixWayPins[i], INPUT_PULLUP);  // Enable internal pull-up
   }
@@ -82,7 +86,7 @@ void Gears_begin()
   for (size_t i = 0; i < sizeof(ImpulsePins)/sizeof(ImpulsePins[0]); ++i)
   {
     mcp.pinMode(ImpulsePins[i], INPUT_PULLUP);
-  }
+  }*/
   
   // Read initial state
   lastGPIOAB = mcp.readGPIOAB();
