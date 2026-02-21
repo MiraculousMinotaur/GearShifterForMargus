@@ -36,7 +36,7 @@ void setup() {
   
   // Initialize I2C bus (Wire library)
   Wire.begin();
-  
+  Wire.setClock(400000); // Set I2C clock to 400kHz for faster communication with ADS1115 and MCP23017
   // Initialize MCP23017 for gear inputs
   #if GEARS
   mcp.begin_I2C(MCP23017_I2C_ADDR);
@@ -84,6 +84,7 @@ void loop()
 {
   // Module updates are scheduled by the 1ms Scheduler (see Scheduler_start and scheduler flag handling).
   // Scheduler-driven tasks triggered from Timer3 (1ms tick)
+  static uint32_t timer = micros();
   if (scheduler_ms_flag)
   {
     // clear flag and atomically snapshot ADC accumulators
@@ -94,8 +95,9 @@ void loop()
     // ACS712_snapshotAndClear is non-atomic by design; perform snapshot inside this interrupt-disabled section
     ACS712_snapshotAndClear(&currentSum, &currentCount);
     interrupts();
-
-    // Apply averaged ADC value if samples were collected
+    Serial.print("Scheduler tick: first step");
+    Serial.println(micros() - timer);
+        // Apply averaged ADC value if samples were collected
     if (currentCount > 0)
     {
       uint16_t avg = currentSum / currentCount;
@@ -107,13 +109,15 @@ void loop()
 
     // 1) Every loop: current control trigger (set tick and perform update)
     ACS712_update();
-
+    Serial.print("Scheduler tick: 2nd step");
+    Serial.println(micros() - timer);
     // 1.2) Every other loop: request FFB/USB processing
     if (schedCounter & 1)
     {
       Joystick.getUSBPID();
     }
-
+    Serial.print("Scheduler tick: USB PID step");
+    Serial.println(micros() - timer);
     // 1.3) Every odd tick: alternate pedals/gears reads (offset from USBPID which runs on even ticks)
     if (schedCounter > 4)
     {
@@ -124,6 +128,8 @@ void loop()
         Pedals_update();
         #endif
         readPedals--;
+        Serial.print("Scheduler tick: pedals");
+        Serial.println(micros() - timer);
       }
       else
       {
@@ -131,6 +137,8 @@ void loop()
         Gears_update();
         #endif
         readPedals = 4; // reset to read pedals for the next 4 cycles
+        Serial.print("Scheduler tick: gears");
+        Serial.println(micros() - timer);
       }
       schedCounter = 0;
     }
@@ -139,6 +147,8 @@ void loop()
     #if WHEEL
     Wheel_update();
     #endif
+    Serial.print("Scheduler tick: wheel");
+    Serial.println(micros() - timer);
 
     // 1.4) Debug manager at end of cycle
   #if DEBUG
