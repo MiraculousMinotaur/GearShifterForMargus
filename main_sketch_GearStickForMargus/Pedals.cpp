@@ -38,8 +38,7 @@ void Pedals_begin()
   // so we cycle through channels by starting on channel 0 and reading the last result
   // The scheduler will cycle through channels in Pedals_update()
   currentChannel = ADS_CH_BRAKE;  // Will cycle to 0 in first Pedals_update() call
-  ads.startADCReading((ADS1X15_REG_CONFIG_MUX_SINGLE_0), /*multishot=*/true);  // Start continuous on accel channel
-
+  ads.startADCReading((MUX_BY_CHANNEL[currentChannel]), /*multishot=*/false);  // Start continuous on accel channel
 }
 
 void Pedals_update()
@@ -52,7 +51,7 @@ void Pedals_update()
   // Cycle to the next channel (0 -> 1 -> 2 -> 3 -> 0)
   currentChannel = currentChannel < 2?(currentChannel + 1) : 0 ; //
   
-  ads.startADCReading(ADS1X15_REG_CONFIG_MUX_SINGLE_0 + (currentChannel << 3), /*multishot=*/true);
+  ads.startADCReading((MUX_BY_CHANNEL[currentChannel]), /*multishot=*/false);
 
   // Update Joystick outputs with constrained raw 16-bit values
   // Constrain each raw value to its calibration range [MIN_VALUE, MAX_VALUE]
