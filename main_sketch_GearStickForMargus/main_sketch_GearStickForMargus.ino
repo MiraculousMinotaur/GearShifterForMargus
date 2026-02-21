@@ -127,7 +127,7 @@ void loop()
         #endif
         readPedals--;
         Serial.print(micros() - timer);
-        Serial.println(": Scheduler tick: pedals");;
+        Serial.println(": Pedals");;
       }
       else
       {
@@ -136,7 +136,7 @@ void loop()
         #endif
         readPedals = 4; // reset to read pedals for the next 4 cycles
         Serial.print(micros() - timer);
-        Serial.println(": Scheduler tick: gears");
+        Serial.println(": gears");
       }
       schedCounter = 0;
     }
@@ -147,7 +147,7 @@ void loop()
     Wheel_update();
     #endif
     Serial.print(micros() - timer);
-    Serial.println(": Scheduler tick: wheel");
+    Serial.println(": Wheel update");
 
     // 1.4) Debug manager at end of cycle
   #if DEBUG
@@ -155,5 +155,8 @@ void loop()
   #endif
     schedCounter++;
   }
+  timer = micros();
   Joystick.sendState(); // Send the current joystick state to the host computer; must be called regularly to ensure timely updates
+  Serial.print(micros() - timer);
+  Serial.println(": SEND STATE");
 }
