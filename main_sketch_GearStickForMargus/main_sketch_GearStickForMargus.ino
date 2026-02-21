@@ -98,6 +98,7 @@ void loop()
   // Module updates are scheduled by the 1ms Scheduler (see Scheduler_start and scheduler flag handling).
   // Scheduler-driven tasks triggered from Timer3 (1ms tick)
   static uint32_t timer = micros();
+  static uint8_t schedCounter = 0;
   if (scheduler_ms_flag)
   {
     Serial.print("ISR duration (us): ");
@@ -126,7 +127,7 @@ void loop()
         #endif
         readPedals--;
         Serial.print(micros() - timer);
-        Serial.println(": SScheduler tick: pedals");
+        Serial.println(": Scheduler tick: pedals");;
       }
       else
       {
@@ -135,21 +136,23 @@ void loop()
         #endif
         readPedals = 4; // reset to read pedals for the next 4 cycles
         Serial.print(micros() - timer);
-        Serial.println(": SScheduler tick: gears");
+        Serial.println(": Scheduler tick: gears");
       }
       schedCounter = 0;
     }
 
     // Wheel update runs each scheduler cycle to update axis and apply FFB/motor targets
     #if WHEEL
+    timer = micros();
     Wheel_update();
     #endif
     Serial.print(micros() - timer);
-    Serial.println(": SScheduler tick: wheel");
+    Serial.println(": Scheduler tick: wheel");
 
     // 1.4) Debug manager at end of cycle
   #if DEBUG
     DebugManager_update();
   #endif
+    schedCounter++;
   }
 }
