@@ -45,6 +45,7 @@ void Pedals_begin()
 
 void Pedals_update()
 {
+  if(!ads.conversionComplete()){return;} // If conversion not complete, skip this update cycle.
   // Read the last conversion result (from the previous channel)
   // ADS1115 returns int16_t where center (0 value) is at max_int16/2 = 32767/2 ≈ 16384
   adsValues[currentChannel] = ads.getLastConversionResults();
