@@ -51,7 +51,7 @@ void setup() {
   // Conversion is started in Pedals_Begin() after calibration values are set
   #endif
 // Initialize Joystick Library, must be called after Serial for debug prints and before modules which use Joystick
-  Joystick.begin(true);
+  Joystick.begin(false); // Don't auto-send state; we'll call Joystick.sendState() manually in the main loop after updates
   // ========== Module initializations ==========
 #if WHEEL
   Wheel_begin();
@@ -155,4 +155,5 @@ void loop()
   #endif
     schedCounter++;
   }
+  Joystick.sendState(); // Send the current joystick state to the host computer; must be called regularly to ensure timely updates
 }
