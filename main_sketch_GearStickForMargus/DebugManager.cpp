@@ -49,7 +49,7 @@ const DebugTelemetry_t* DebugManager_getTelemetry(void)
 // ===== CSV Output =====
 static void outputCSVTelemetry(void)
 {
-  // Format: WHEEL,<pos>,ACS,<raw>,<delta>,<target>,<duty>,<kp>,<ki>,<kd>,ACCEL,<val>,BRAKE,<val>,CLUTCH,<val>,VREF,<val>,MCP,<0xHHHH>
+  // Format: WHEEL,<pos>,ACS,<raw>,<delta>,<target>,<duty>,<kp>,<ki>,<kd>,ACCEL,<val>,BRAKE,<val>,CLUTCH,<val>,MCP,<0b1010101010101010>
   Serial.print("WHEEL,");
   Serial.print(telemetryBuffer.wheel_position);
   Serial.print(",ACS,");
@@ -72,8 +72,6 @@ static void outputCSVTelemetry(void)
   Serial.print(telemetryBuffer.pedals_brake);
   Serial.print(",");
   Serial.print(telemetryBuffer.pedals_clutch);
-  Serial.print(",");
-  Serial.print(telemetryBuffer.pedals_vref);
   Serial.print(",MCP,0x");
   Serial.print(telemetryBuffer.gears_gpio, BIN);
   Serial.println();

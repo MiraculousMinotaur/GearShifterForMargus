@@ -17,7 +17,6 @@ struct DebugTelemetry_t {
   int16_t pedals_accel;             // Accelerator raw value
   int16_t pedals_brake;             // Brake raw value
   int16_t pedals_clutch;            // Clutch raw value
-  int16_t pedals_vref;              // Reference voltage raw value
   uint16_t gears_gpio;              // MCP GPIO byte (all 16 bits)
 };
 
