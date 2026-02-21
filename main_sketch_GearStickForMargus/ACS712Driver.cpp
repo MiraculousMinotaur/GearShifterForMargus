@@ -132,8 +132,7 @@ void ACS712_update()
   {
     enabled = false;
     setMotor(0);
-    Serial.print("ERR: SHUTOFF adc="); Serial.print((int)lastADC);
-    Serial.print(" delta="); Serial.println((int)adcDelta);
+    // TODO: add flag for ERROR report error state via debug telemetry
     return;
   }
 

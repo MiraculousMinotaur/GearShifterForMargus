@@ -75,7 +75,7 @@ static void outputCSVTelemetry(void)
   Serial.print(",");
   Serial.print(telemetryBuffer.pedals_vref);
   Serial.print(",MCP,0x");
-  Serial.print(telemetryBuffer.gears_gpio, HEX);
+  Serial.print(telemetryBuffer.gears_gpio, BIN);
   Serial.println();
 }
 
@@ -169,7 +169,7 @@ static void processCommand(const char *cmd)
 void DebugManager_update(void)
 {
   // === Handle serial input (non-blocking) ===
-  while (Serial.available())
+  /*while (Serial.available())
   {
     char c = Serial.read();
     if (c == '\r' || c == '\n') {
@@ -184,7 +184,7 @@ void DebugManager_update(void)
       }
     }
   }
-
+*/
   // === Collect telemetry from all modules ===
   #if WHEEL
   Wheel_reportDebug(&telemetryBuffer);

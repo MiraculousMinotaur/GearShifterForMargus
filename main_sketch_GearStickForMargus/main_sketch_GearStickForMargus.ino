@@ -73,11 +73,24 @@ void setup() {
   Scheduler_start();
 
 }
-
+uint32_t schedTimerTimer = 0;
 
 ISR(TIMER3_COMPA_vect){
-  // Minimal ISR: set scheduler flag only. Heavy work happens in main context.
-  scheduler_ms_flag = 1;
+  schedTimerTimer = micros();
+  scheduler_ms_flag = 1;//Limit other actions to less then 1Khz just in case.
+  uint16_t currentSum = 0;
+  uint16_t currentCount = 0;
+  // ACS712_snapshotAndClear is non-atomic by design; perform snapshot inside this interrupt-disabled section
+  ACS712_snapshotAndClear(&currentSum, &currentCount);
+  sei();
+  // Apply averaged ADC value if samples were collected
+  if (currentCount > 0)
+  {
+    uint16_t avg = currentSum / currentCount;
+    ACS712_setLastADC(avg);
+  }
+  ACS712_update();
+  schedTimerTimer = micros() - schedTimerTimer;
 }
 
 void loop() 
@@ -87,37 +100,21 @@ void loop()
   static uint32_t timer = micros();
   if (scheduler_ms_flag)
   {
-    // clear flag and atomically snapshot ADC accumulators
-    noInterrupts();
+    Serial.print("ISR duration (us): ");
+    cli();
+     timer = schedTimerTimer; // Capture ISR duration for debug output
+    sei();
     scheduler_ms_flag = 0;
-    uint16_t currentSum = 0;
-    uint16_t currentCount = 0;
-    // ACS712_snapshotAndClear is non-atomic by design; perform snapshot inside this interrupt-disabled section
-    ACS712_snapshotAndClear(&currentSum, &currentCount);
-    interrupts();
-    Serial.print("Scheduler tick: first step");
-    Serial.println(micros() - timer);
-        // Apply averaged ADC value if samples were collected
-    if (currentCount > 0)
-    {
-      uint16_t avg = currentSum / currentCount;
-      ACS712_setLastADC(avg);
-    }
-
-    static uint16_t schedCounter = 0;
-    schedCounter++;
-
-    // 1) Every loop: current control trigger (set tick and perform update)
-    ACS712_update();
-    Serial.print("Scheduler tick: 2nd step");
-    Serial.println(micros() - timer);
+    Serial.println(timer);
+    timer = micros(); // Capture total scheduler tick duration for debug output
     // 1.2) Every other loop: request FFB/USB processing
     if (schedCounter & 1)
     {
       Joystick.getUSBPID();
     }
-    Serial.print("Scheduler tick: USB PID step");
-    Serial.println(micros() - timer);
+    Serial.print(micros() - timer);
+    Serial.println(": Scheduler tick: USB PID step");
+    
     // 1.3) Every odd tick: alternate pedals/gears reads (offset from USBPID which runs on even ticks)
     if (schedCounter > 4)
     {
@@ -128,8 +125,8 @@ void loop()
         Pedals_update();
         #endif
         readPedals--;
-        Serial.print("Scheduler tick: pedals");
-        Serial.println(micros() - timer);
+        Serial.print(micros() - timer);
+        Serial.println(": SScheduler tick: pedals");
       }
       else
       {
@@ -137,8 +134,8 @@ void loop()
         Gears_update();
         #endif
         readPedals = 4; // reset to read pedals for the next 4 cycles
-        Serial.print("Scheduler tick: gears");
-        Serial.println(micros() - timer);
+        Serial.print(micros() - timer);
+        Serial.println(": SScheduler tick: gears");
       }
       schedCounter = 0;
     }
@@ -147,8 +144,8 @@ void loop()
     #if WHEEL
     Wheel_update();
     #endif
-    Serial.print("Scheduler tick: wheel");
-    Serial.println(micros() - timer);
+    Serial.print(micros() - timer);
+    Serial.println(": SScheduler tick: wheel");
 
     // 1.4) Debug manager at end of cycle
   #if DEBUG
