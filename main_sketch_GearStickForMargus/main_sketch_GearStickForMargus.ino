@@ -50,7 +50,8 @@ void setup() {
   
   // Conversion is started in Pedals_Begin() after calibration values are set
   #endif
-
+// Initialize Joystick Library, must be called after Serial for debug prints and before modules which use Joystick
+  Joystick.begin(true);
   // ========== Module initializations ==========
 #if WHEEL
   Wheel_begin();
@@ -66,8 +67,7 @@ void setup() {
 #endif
 
 
-  // Initialize Joystick Library
-  Joystick.begin(true);
+
 
   // Start the 1ms scheduler and debug manager
   Scheduler_start();
