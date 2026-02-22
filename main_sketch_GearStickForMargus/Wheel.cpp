@@ -61,7 +61,7 @@ EffectParams effectparams[2];
 // PI controller in ACS712 to smoothly regulate motor current to achieve targets.
 
 // Self-centering: constant force toward center when no FFB
-#define SELFCENTER_FORCE 20  // constant force magnitude toward center
+#define SELFCENTER_FORCE 80  // constant force magnitude toward center
 
 static int16_t Wheel_computeTargetForce(void)
 {
@@ -103,12 +103,12 @@ static int16_t Wheel_computeTargetForce(void)
   if (currentPosition > 0)
   {
     // Pull toward center (negative)
-    return -SELFCENTER_FORCE;
+    return SELFCENTER_FORCE;
   }
   else if (currentPosition < 0)
   {
     // Pull toward center (positive)
-    return SELFCENTER_FORCE;
+    return -SELFCENTER_FORCE;
   }
 
   // At center: no force needed
