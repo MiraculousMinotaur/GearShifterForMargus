@@ -53,11 +53,13 @@ void setup() {
 // Initialize Joystick Library, must be called after Serial for debug prints and before modules which use Joystick
   Joystick.begin(false); // Don't auto-send state; we'll call Joystick.sendState() manually in the main loop after updates
   // ========== Module initializations ==========
+  // Initialize Wheel before ACS712 so encoder and FFB setup is complete
 #if WHEEL
   Wheel_begin();
 #endif
 #if FFB
   ACS712_begin();
+  ACS712_enable(false); // Start with motor disabled; enable when FFB becomes active
 #endif
 #if PEDALS
   Pedals_begin();

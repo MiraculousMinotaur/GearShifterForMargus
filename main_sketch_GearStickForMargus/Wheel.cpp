@@ -1,6 +1,7 @@
 #include "Wheel.h"
 #include "Config.h"
 #include "motor.h"
+#include "ACS712Driver.h"
 #include "DebugManager.h"
 
 #if WHEEL
@@ -49,63 +50,44 @@ EffectParams effectparams[2];
 // PWM initialization moved to Motor_init() in motor.cpp
 // void initPWM() no longer defined here.
 
-// Motor actuation moved to motor.cpp (setMotor / Motor_set).
-
-int32_t lastPosition = 0;
-int32_t integral = 0;
-
-// self-centering and PID control moved to Motor_selfCenter() in motor.cpp.
+// Motor control now goes through ACS712 only, centralizing all Motor_set() calls.
+// Wheel provides target force via ACS712_setTargetFromForce().
 
 #endif // FFB
 
 #if FFB
-// Ramp mapping: integer quadratic mapping from raw force to PWM magnitude.
-// Small raw forces map to a small fraction (soft start) while larger forces
-// ramp up towards MAX_PWM. The mapping ensures that raw==0 -> pwm==0,
-// and raw at max -> pwm == MAX_PWM. For any non-zero raw we ensure a
-// minimum perceptible PWM of ~5% of MAX_PWM.
-static int16_t rampForceToPWM(int16_t rawForce)
+// Wheel computes target forces (FFB + endpoint limiting) to send to ACS712.
+// This replaces direct motor control with force target setting, allowing the
+// PI controller in ACS712 to smoothly regulate motor current to achieve targets.
+static int16_t Wheel_computeTargetForce(void)
 {
-  int16_t maxForce = MAX_FORCES; // expected maximum force magnitude coming from joystick
-  int16_t absForce = rawForce < 0 ? -rawForce : rawForce;
-
-  if (absForce == 0) return 0;
-
-  int16_t minPWM = (MAX_PWM * 5) / 100; // 5% baseline
-  if (minPWM < 1) minPWM = 1;
-
-  // Quadratic scaling (integer-friendly): pwm = minPWM + (abs^2 * (MAX_PWM-minPWM)) / (maxForce^2)
-  int32_t numerator = (int32_t)absForce * (int32_t)absForce * (int32_t)(MAX_PWM - minPWM);
-  int32_t denom = (int32_t)maxForce * (int32_t)maxForce;
-  int16_t scaled = (int16_t)(numerator / (denom + 1));
-
-  int16_t pwm = minPWM + scaled;
-  if (pwm > MAX_PWM) pwm = MAX_PWM;
-  return pwm;
-}
-
-static int16_t computeEndpointPWM(void)
-{
+  // Check for endpoint breach and apply corrective (dampening) force if needed
   if (currentPosition > ENCODER_MAX_VALUE)
   {
+    // Over max: compute dampening force to push back
     int32_t dist = currentPosition - ENCODER_MAX_VALUE;
     int32_t fullRange = ENCODER_MAX_VALUE - ENCODER_MIN_VALUE;
-    int32_t pwm = (dist * (int32_t)MAX_PWM) / ( (fullRange / ENDPOINT_BAND) + 1 );
-    if (pwm < (MAX_PWM * 5) / 100) pwm = (MAX_PWM * 5) / 100; // ensure perceptible
-    if (pwm > MAX_PWM) pwm = MAX_PWM;
-    return (int16_t)pwm; // positive means we need to push back negative direction in setMotor usage below
+    // Map distance over limit to a negative force (pushes negative direction)
+    int32_t dampingForce = -(dist * (int32_t)MAX_FORCES) / ((fullRange / ENDPOINT_BAND) + 1);
+    if (dampingForce > -(MAX_FORCES / 20)) dampingForce = -(MAX_FORCES / 20); // ensure perceptible
+    if (dampingForce < -MAX_FORCES) dampingForce = -MAX_FORCES;
+    return (int16_t)dampingForce;
   }
   else if (currentPosition < ENCODER_MIN_VALUE)
   {
+    // Under min: compute dampening force to push back
     int32_t dist = ENCODER_MIN_VALUE - currentPosition;
     int32_t fullRange = ENCODER_MAX_VALUE - ENCODER_MIN_VALUE;
-    int32_t pwm = (dist * (int32_t)MAX_PWM) / ( (fullRange / ENDPOINT_BAND) + 1 );
-    if (pwm < (MAX_PWM * 5) / 100) pwm = (MAX_PWM * 5) / 100;
-    if (pwm > MAX_PWM) pwm = MAX_PWM;
-    return (int16_t)pwm; // positive means we need to push back positive direction in setMotor usage below
+    // Map distance over limit to a positive force (pushes positive direction)
+    int32_t dampingForce = (dist * (int32_t)MAX_FORCES) / ((fullRange / ENDPOINT_BAND) + 1);
+    if (dampingForce < (MAX_FORCES / 20)) dampingForce = (MAX_FORCES / 20); // ensure perceptible
+    if (dampingForce > MAX_FORCES) dampingForce = MAX_FORCES;
+    return (int16_t)dampingForce;
   }
 
-  return 0;
+  // Normal FFB path: get the raw force from Joystick and return it as target
+  int16_t rawForce = (int16_t)forces[0];
+  return rawForce;
 }
 #endif
 
@@ -142,23 +124,18 @@ void Wheel_update(void)
   effectparams[0].springPosition = (int)wheelOutput;
   Joystick.setEffectParams(effectparams);
   Joystick.getForce(forces);
-  // First, check endpoint breach and apply corrective PWM if needed
-  int16_t endpointPWM = Motor_computeEndpointPWM(wheelOutput);
-  if (endpointPWM != 0)
+  
+  // Compute target force (respects endpoints and FFB)
+  int16_t targetForce = Wheel_computeTargetForce();
+  
+  // Send target force to ACS712 (the single motor control authority)
+  // ACS712 will convert this force to current target and regulate motor via PI controller
+  ACS712_setTargetFromForce(targetForce);
+  
+  // Auto-enable ACS712 when FFB is active (motor should move when receiving targets)
+  if (!ACS712_isEnabled())
   {
-    // If position is above max, we want to drive motor negative (back towards center)
-    // ENDPOINT_BAND determines how aggressively we try to bring it back: larger
-    setMotor(endpointPWM);
-  }
-  else
-  {
-    // Normal force path: get the raw force from the Joystick FFB system,
-    // map it to a smoother PWM curve and apply with direction.
-    int16_t rawForce = (int16_t)forces[0];
-    int16_t sign = (rawForce < 0) ? -1 : 1;
-    int16_t pwm = Motor_rampForceToPWM(rawForce);
-    pwm = limitVal(pwm, 0, MAX_PWM);
-    setMotor(-(sign * pwm));
+    ACS712_enable(true);
   }
 #endif
 }

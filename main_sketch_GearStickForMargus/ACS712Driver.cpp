@@ -22,8 +22,8 @@ static const uint32_t CONTROL_INTERVAL_US = 1000000UL / CONTROL_HZ;
 static const uint8_t SAMPLES_PER_CYCLE = 4;
 static const uint32_t SAMPLE_INTERVAL_US = CONTROL_INTERVAL_US / SAMPLES_PER_CYCLE; // approx spacing
 
-// Motor limits tied to setMotor scaling
-static const int16_t MAX_SETMOTOR = 204; // since setMotor(force) does force*=3 and we want scaled<=614
+// Motor PWM limits
+static const int16_t MAX_ADC_TARGET = 130; // max ADC delta to allow motor to regulate
 
 // Controller state
 // Note: sampling is done in ISR accumulators (adcSum/adcCount). Do not use samples[]/sampleCount.
@@ -44,7 +44,7 @@ static bool enabled = false;
 
 // Runtime state for status
 static uint16_t lastADC = 0;
-static int16_t lastDuty = 0; // scaled for setMotor
+static int16_t lastDuty = 0; // last PWM duty cycle sent to motor
 
 void ACS712_begin()
 {
@@ -137,7 +137,7 @@ void ACS712_update()
   if (adcDelta >= SHUTOFF_ADC_DELTA)
   {
     enabled = false;
-    setMotor(0);
+    Motor_set(0);
     // TODO: add flag for ERROR report error state via debug telemetry
     return;
   }
@@ -145,7 +145,7 @@ void ACS712_update()
   if (!enabled)
   {
     // Controller disabled: ensure motor off
-    setMotor(0);
+    Motor_set(0);
     integrator_q = 0;
     lastError_i = 0;
     lastDuty = 0;
@@ -180,8 +180,8 @@ void ACS712_update()
   int16_t motorVal = (int16_t)u;  // direct ADC delta to motor mapping
   lastDuty = motorVal;
 
-  // Apply motor with sign convention: setMotor expects signed value
-  setMotor(motorVal);
+  // Apply motor via PWM controller
+  Motor_set(motorVal);
 }
 
 void ACS712_setTargetA(uint16_t adcValue)
@@ -206,7 +206,7 @@ void ACS712_setTargetFromForce(int16_t force)
 void ACS712_enable(bool en)
 {
   enabled = en;
-  if (!en) { integrator_q = 0; lastError_i = 0; setMotor(0); }
+  if (!en) { integrator_q = 0; lastError_i = 0; Motor_set(0); }
 }
 
 bool ACS712_isEnabled()

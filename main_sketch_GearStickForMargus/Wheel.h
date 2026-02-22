@@ -32,12 +32,11 @@ extern volatile int32_t currentPosition;
 #define MAX_FORCES 250 // Testing revealed Force MAX values is 250
 #endif
 
-#if FFB
-void setMotor(int16_t force);
-#endif
-
 void Wheel_begin();
 void Wheel_update();
+
+// Wheel computes target forces but does not directly control motor.
+// All motor control flows through ACS712 via ACS712_setTargetFromForce().
 
 // Debug report function (opaque pointer, actual type defined in DebugManager.h)
 #if DEBUG

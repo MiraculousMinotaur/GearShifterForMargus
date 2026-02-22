@@ -5,7 +5,7 @@
 #include <avr/io.h>
 #include "FixedPoint.h"
 
-static int16_t lastForce = 0; // scaled user value passed to Motor_set (pre-scaling)
+static int16_t lastPWMTarget = 0; // last PWM value sent to motor
 
 void Motor_init(void)
 {
@@ -25,19 +25,21 @@ void Motor_init(void)
   ICR1 = 0x2FF; //~21Khz
 }
 
-void setMotor(int16_t force)
+void Motor_set(int16_t pwmValue)
 {
-    lastForce = force;
-    int16_t scaled = force * 3;//scale for PWM
-    if(0 < scaled)
+    lastPWMTarget = pwmValue;
+    // Clamp to PWM limits
+    int16_t clamped = limitVal(pwmValue, (int16_t)-MAX_PWM, (int16_t)MAX_PWM);
+    
+    if (clamped > 0)
     {
         OCR1A = 0;
-        OCR1B = scaled;
+        OCR1B = clamped;
     }
-    else if (0 > scaled)
+    else if (clamped < 0)
     {
         OCR1B = 0;
-        OCR1A = -scaled;
+        OCR1A = -clamped;
     }
     else
     {
@@ -46,90 +48,11 @@ void setMotor(int16_t force)
     }
 }
 
-void Motor_set(int16_t force) { setMotor(force); }
-
-int16_t Motor_getLastForce(void)
+int16_t Motor_getLastPWMTarget(void)
 {
-  return lastForce;
+  return lastPWMTarget;
 }
 
-// FFB helper implementations moved from Wheel.cpp to central Motor module
-
-int16_t Motor_rampForceToPWM(int16_t rawForce)
-{
-  int16_t maxForce = MAX_FORCES; // expected maximum force magnitude coming from joystick
-  int16_t absForce = rawForce < 0 ? -rawForce : rawForce;
-
-  if (absForce == 0) return 0;
-
-  int16_t minPWM = (MAX_PWM * 5) / 100; // 5% baseline
-  if (minPWM < 1) minPWM = 1;
-
-  // Quadratic scaling (integer-friendly): pwm = minPWM + (abs^2 * (MAX_PWM-minPWM)) / (maxForce^2)
-  int32_t numerator = (int32_t)absForce * (int32_t)absForce * (int32_t)(MAX_PWM - minPWM);
-  int32_t denom = (int32_t)maxForce * (int32_t)maxForce;
-  int16_t scaled = (int16_t)(numerator / (denom + 1));
-
-  int16_t pwm = minPWM + scaled;
-  if (pwm > MAX_PWM) pwm = MAX_PWM;
-  return pwm;
-}
-
-int16_t Motor_computeEndpointPWM(int32_t currentPosition)
-{
-  if (currentPosition > ENCODER_MAX_VALUE)
-  {
-    int32_t dist = currentPosition - ENCODER_MAX_VALUE;
-    int32_t fullRange = ENCODER_MAX_VALUE - ENCODER_MIN_VALUE;
-    int32_t pwm = (dist * (int32_t)MAX_PWM) / ( (fullRange / ENDPOINT_BAND) + 1 );
-    if (pwm < (MAX_PWM * 5) / 100) pwm = (MAX_PWM * 5) / 100; // ensure perceptible
-    if (pwm > MAX_PWM) pwm = MAX_PWM;
-    return (int16_t)pwm; // positive means we need to push back negative direction in setMotor usage below
-  }
-  else if (currentPosition < ENCODER_MIN_VALUE)
-  {
-    int32_t dist = ENCODER_MIN_VALUE - currentPosition;
-    int32_t fullRange = ENCODER_MAX_VALUE - ENCODER_MIN_VALUE;
-    int32_t pwm = (dist * (int32_t)MAX_PWM) / ( (fullRange / ENDPOINT_BAND) + 1 );
-    if (pwm < (MAX_PWM * 5) / 100) pwm = (MAX_PWM * 5) / 100;
-    if (pwm > MAX_PWM) pwm = MAX_PWM;
-    return (int16_t)pwm; // positive means we need to push back positive direction in setMotor usage below
-  }
-
-  return 0;
-}
-
-void Motor_selfCenter(int32_t wheelOutput)
-{
-  // Internal PID maintained in motor module
-  static int32_t lastPosition = 0;
-  static int32_t integral_q = 0;
-  // Gains in Q8 fixed-point (configured in motor.h)
-  const int16_t Kp_q8 = MOTOR_SELFCENTER_KP_Q8;
-  const int16_t Ki_q8 = MOTOR_SELFCENTER_KI_Q8;
-  const int16_t Kd_q8 = MOTOR_SELFCENTER_KD_Q8;
-
-  int32_t error = 0 - wheelOutput;
-
-  // Integral with windup guard (integrator holds raw sum)
-  integral_q += error;
-  if (integral_q > 10000) integral_q = 10000;
-  if (integral_q < -10000) integral_q = -10000;
-
-  // Derivative
-  int32_t velocity = wheelOutput - lastPosition; // wheelOutput provides current position snapshot
-  lastPosition = wheelOutput;
-
-  // PID in Q8 domain
-  int64_t termP = (int64_t)Kp_q8 * (int64_t)error; // Q8*int -> Q8*int
-  int64_t termI = ((int64_t)Ki_q8 * (int64_t)integral_q) / (int64_t)SCALE_Q8; // back to Q8
-  int64_t termD = ((int64_t)Kd_q8 * (int64_t)velocity) / (int64_t)SCALE_Q8;
-
-  int64_t u_q8 = termP + termI - termD;
-  int32_t u = (int32_t)(u_q8 / (int64_t)SCALE_Q8); // back to native units
-
-  // Clamp to centering limit
-  int16_t pwmForce = (int16_t)limitVal<int32_t>(u, -(int32_t)MAX_CENTERING_PWM, (int32_t)MAX_CENTERING_PWM);
-
-  setMotor(-pwmForce);
-}
+// Motor_rampForceToPWM() removed - force mapping now handled by Wheel module
+// Motor_computeEndpointPWM() removed - endpoint dampening now handled by Wheel module
+// Motor_selfCenter() removed - self-centering can be implemented via Wheel target forces if needed in future
