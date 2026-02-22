@@ -75,10 +75,8 @@ void setup() {
   Scheduler_start();
 
 }
-uint32_t schedTimerTimer = 0;
 
 ISR(TIMER3_COMPA_vect){
-  schedTimerTimer = micros();
   scheduler_ms_flag = 1;//Limit other actions to less then 1Khz just in case.
   uint16_t currentSum = 0;
   uint16_t currentCount = 0;
@@ -92,24 +90,16 @@ ISR(TIMER3_COMPA_vect){
     ACS712_setLastADC(avg);
   }
   ACS712_update();
-  schedTimerTimer = micros() - schedTimerTimer;
 }
 
 void loop() 
 {
   // Module updates are scheduled by the 1ms Scheduler (see Scheduler_start and scheduler flag handling).
   // Scheduler-driven tasks triggered from Timer3 (1ms tick)
-  static uint32_t timer = micros();
   static uint8_t schedCounter = 0;
   if (scheduler_ms_flag)
   {
-    Serial.print("ISR duration (us): ");
-    cli();
-     timer = schedTimerTimer; // Capture ISR duration for debug output
-    sei();
     scheduler_ms_flag = 0;
-    Serial.println(timer);
-    timer = micros(); // Capture total scheduler tick duration for debug output
     // 1.2) Every other loop: request FFB/USB processing
     if (schedCounter & 1)
     {
@@ -117,8 +107,6 @@ void loop()
 #if WHEEL
       Wheel_update();
 #endif
-      Serial.print(micros() - timer);
-      Serial.println(": Wheel update and USB PID");
     }
     
     // 1.3) Every odd tick: alternate pedals/gears reads (offset from USBPID which runs on even ticks)
@@ -131,8 +119,6 @@ void loop()
         Pedals_update();
         #endif
         readPedals--;
-        Serial.print(micros() - timer);
-        Serial.println(": Pedals");;
       }
       else
       {
@@ -140,8 +126,6 @@ void loop()
         Gears_update();
         #endif
         readPedals = 4; // reset to read pedals for the next 4 cycles
-        Serial.print(micros() - timer);
-        Serial.println(": gears");
       }
       schedCounter = 0;
     }
@@ -153,8 +137,5 @@ void loop()
   #endif
     schedCounter++;
   }
-  timer = micros();
   Joystick.sendState(); // Send the current joystick state to the host computer; must be called regularly to ensure timely updates
-  Serial.print(micros() - timer);
-  Serial.println(": SEND STATE");
 }

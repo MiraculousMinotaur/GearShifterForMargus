@@ -96,7 +96,7 @@ static int16_t Wheel_computeTargetForce(void)
   if (rawForce != 0)
   {
     // FFB is active: use it as target
-    return rawForce;
+    return -rawForce;
   }
 
   // FFB is inactive: apply constant self-centering force toward center

@@ -14,12 +14,12 @@
 // (ADS1115 channels used: ADS_CH_ACCEL/1/2 defined in Config.h)
 
 // Pedal Calibration TODO: Recalibrate for ADS1115
-const int16_t ACCELERATOR_MIN_VALUE = 320;
-const int16_t ACCELERATOR_MAX_VALUE = 32000;
-const int16_t BRAKE_MIN_VALUE = 60;
-const int16_t BRAKE_MAX_VALUE = 32000;
-const int16_t CLUTCH_MIN_VALUE = 90;
-const int16_t CLUTCH_MAX_VALUE = 32000;
+const int16_t ACCELERATOR_MIN_VALUE = 10000;
+const int16_t ACCELERATOR_MAX_VALUE = 24000;
+const int16_t BRAKE_MIN_VALUE = 2200;
+const int16_t BRAKE_MAX_VALUE = 20000;
+const int16_t CLUTCH_MIN_VALUE = 6000;
+const int16_t CLUTCH_MAX_VALUE = 16000;
 // Extern ADS1115 instance (defined in Pedals.cpp)
 extern Adafruit_ADS1115 ads;
 
