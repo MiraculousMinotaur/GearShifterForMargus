@@ -26,8 +26,7 @@ extern volatile int32_t currentPosition;
 #define MOTOR_PIN_A 9
 #define MOTOR_PIN_B 10
 #define MOTOR_PIN_ENABLE A0
-// Motor Limits
-#define MAX_PWM 200 // Going full 255 has higher chance to burn the motor
+
 #define MAX_FORCES 250 // Testing revealed Force MAX values is 250
 #endif
 
