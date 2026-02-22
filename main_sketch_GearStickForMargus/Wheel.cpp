@@ -56,38 +56,63 @@ EffectParams effectparams[2];
 #endif // FFB
 
 #if FFB
-// Wheel computes target forces (FFB + endpoint limiting) to send to ACS712.
+// Wheel computes target forces (FFB + endpoint limiting + self-centering) to send to ACS712.
 // This replaces direct motor control with force target setting, allowing the
 // PI controller in ACS712 to smoothly regulate motor current to achieve targets.
+
+// Self-centering: constant force toward center when no FFB
+#define SELFCENTER_FORCE 20  // constant force magnitude toward center
+
 static int16_t Wheel_computeTargetForce(void)
 {
   // Check for endpoint breach and apply corrective (dampening) force if needed
   if (currentPosition > ENCODER_MAX_VALUE)
   {
-    // Over max: compute dampening force to push back
+    // Over max: compute dampening force to push back (positive to return toward center)
     int32_t dist = currentPosition - ENCODER_MAX_VALUE;
     int32_t fullRange = ENCODER_MAX_VALUE - ENCODER_MIN_VALUE;
-    // Map distance over limit to a negative force (pushes negative direction)
-    int32_t dampingForce = -(dist * (int32_t)MAX_FORCES) / ((fullRange / ENDPOINT_BAND) + 1);
-    if (dampingForce > -(MAX_FORCES / 20)) dampingForce = -(MAX_FORCES / 20); // ensure perceptible
-    if (dampingForce < -MAX_FORCES) dampingForce = -MAX_FORCES;
+    // Map distance over limit to a positive force (pulls back toward center)
+    int32_t dampingForce = (dist * (int32_t)MAX_FORCES) / ((fullRange / ENDPOINT_BAND) + 1);
+    // Ensure perceptible minimum magnitude
+    if (dampingForce < (MAX_FORCES / 20)) dampingForce = (MAX_FORCES / 20);
+    if (dampingForce > MAX_FORCES) dampingForce = MAX_FORCES;
     return (int16_t)dampingForce;
   }
   else if (currentPosition < ENCODER_MIN_VALUE)
   {
-    // Under min: compute dampening force to push back
+    // Under min: compute dampening force to push back (negative to return toward center)
     int32_t dist = ENCODER_MIN_VALUE - currentPosition;
     int32_t fullRange = ENCODER_MAX_VALUE - ENCODER_MIN_VALUE;
-    // Map distance over limit to a positive force (pushes positive direction)
-    int32_t dampingForce = (dist * (int32_t)MAX_FORCES) / ((fullRange / ENDPOINT_BAND) + 1);
-    if (dampingForce < (MAX_FORCES / 20)) dampingForce = (MAX_FORCES / 20); // ensure perceptible
-    if (dampingForce > MAX_FORCES) dampingForce = MAX_FORCES;
+    // Map distance over limit to a negative force (pulls back toward center)
+    int32_t dampingForce = -(dist * (int32_t)MAX_FORCES) / ((fullRange / ENDPOINT_BAND) + 1);
+    // Ensure perceptible minimum magnitude
+    if (dampingForce > -(MAX_FORCES / 20)) dampingForce = -(MAX_FORCES / 20);
+    if (dampingForce < -MAX_FORCES) dampingForce = -MAX_FORCES;
     return (int16_t)dampingForce;
   }
 
-  // Normal FFB path: get the raw force from Joystick and return it as target
+  // Within bounds: check for FFB input, otherwise apply self-centering
   int16_t rawForce = (int16_t)forces[0];
-  return rawForce;
+  if (rawForce != 0)
+  {
+    // FFB is active: use it as target
+    return rawForce;
+  }
+
+  // FFB is inactive: apply constant self-centering force toward center
+  if (currentPosition > 0)
+  {
+    // Pull toward center (negative)
+    return -SELFCENTER_FORCE;
+  }
+  else if (currentPosition < 0)
+  {
+    // Pull toward center (positive)
+    return SELFCENTER_FORCE;
+  }
+
+  // At center: no force needed
+  return 0;
 }
 #endif
 
