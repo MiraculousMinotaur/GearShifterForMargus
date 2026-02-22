@@ -64,12 +64,7 @@ void ACS712_begin()
   enabled = false;
   // Configure and start free-running ADC on ACS712_PIN_SENSE
   // Derive ADC channel from analog pin macro if available
-#ifdef analogPinToChannel
   setupADC(analogPinToChannel(ACS712_PIN_SENSE));
-#else
-  // Fallback: assume analog pins A0.. map to channels 0..
-  setupADC(ACS712_PIN_SENSE - A0);
-#endif
   startADC();
 }
 
@@ -85,13 +80,24 @@ ISR(ADC_vect)
 void setupADC(uint8_t channel)
 {
   // Select AVcc as reference and channel
-  ADMUX = (1 << REFS0) | (channel & 0x0F);
+  ADMUX = (1 << REFS0) | (channel & 0x1F);
+
+  //HANDLE 32u4 MUX5: This bit lives in ADCSRB.
+  // If bit 5 of your 'channel' variable is set, set MUX5.
+  if (channel & 0x20) {
+    ADCSRB |= (1 << MUX5);
+  } else {
+    ADCSRB &= ~(1 << MUX5);
+  }
 
   // Free running: clear ADTS bits
   ADCSRB &= ~((1 << ADTS2) | (1 << ADTS1) | (1 << ADTS0));
 
   // Prescaler /128, enable ADC, enable auto trigger and ADC interrupt
   ADCSRA = (1 << ADEN) | (1 << ADIE) | (1 << ADATE) | (1 << ADPS2) | (1 << ADPS1) | (1 << ADPS0);
+
+  // 6. OPTIONAL: Disable digital buffer on A5 to reduce noise/power
+  if (channel == 0) DIDR0 |= (1 << ADC0D);
 }
 
 void startADC()
