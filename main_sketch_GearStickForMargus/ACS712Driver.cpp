@@ -10,20 +10,11 @@
 static const int16_t DEFAULT_KP_Q8 = (int16_t)(1 * SCALE_Q8); // 1.0 -> 256
 static const int16_t DEFAULT_KI_Q8 = (int16_t)(26); // ~0.1 * 256 = 25.6 -> 26
 static const int16_t DEFAULT_KD_Q8 = (int16_t)(0);
-static const int16_t MAX_ADC_DELTA = 130;      // max ADC delta from zero (corresponds to ~10A)
-static const int16_t SHUTOFF_ADC_DELTA = 156;  // emergency shutoff threshold (corresponds to ~12A)
+static const int16_t MAX_ADC_DELTA = 250;      // max ADC delta from zero (corresponds to ~10A)
+static const int16_t SHUTOFF_ADC_DELTA = 300;  // emergency shutoff threshold (corresponds to ~12A)
 
 // ADC calibration (10-bit ADC value at zero current)
-static uint16_t zeroADC = 513;
-
-// Sampling & timing // TODO sampling tuning will be handled by register HW config handled in SetupADC() function removed unneccesary values
-static const uint16_t CONTROL_HZ = 240; // default control rate (Hz)
-static const uint32_t CONTROL_INTERVAL_US = 1000000UL / CONTROL_HZ;
-static const uint8_t SAMPLES_PER_CYCLE = 4;
-static const uint32_t SAMPLE_INTERVAL_US = CONTROL_INTERVAL_US / SAMPLES_PER_CYCLE; // approx spacing
-
-// Motor PWM limits
-static const int16_t MAX_ADC_TARGET = 130; // max ADC delta to allow motor to regulate
+static uint16_t zeroADC = 553;
 
 // Controller state
 // Note: sampling is done in ISR accumulators (adcSum/adcCount). Do not use samples[]/sampleCount.
