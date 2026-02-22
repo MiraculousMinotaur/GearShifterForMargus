@@ -168,7 +168,7 @@ void ACS712_update()
   if(adcDelta >= MAX_ADC_DELTA)
     if(lastDuty < u) u = lastDuty--; // if we're already at max delta, don't try to push further
   if(adcDelta <= -MAX_ADC_DELTA)
-    if(lastDuty > u) u = lastDuty--;
+    if(lastDuty > u) u = lastDuty++; // if we're already at min delta, don't try to push further
 
   int16_t motorVal = (int16_t)u;  // direct ADC delta to motor mapping
   lastDuty = motorVal;
