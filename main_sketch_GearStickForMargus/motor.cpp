@@ -9,6 +9,11 @@ static int16_t lastPWMTarget = 0; // last PWM value sent to motor
 
 void Motor_init(void)
 {
+  pinMode(MOTOR_PIN_A, OUTPUT);
+  pinMode(MOTOR_PIN_B, OUTPUT);
+  pinMode(MOTOR_PIN_ENABLE, OUTPUT);
+  digitalWrite(MOTOR_PIN_ENABLE, HIGH);
+  cli();
    // Clear Timer/Counter Control Register A & B
   TCCR1A = 0;
   TCCR1B = 0;
@@ -23,6 +28,7 @@ void Motor_init(void)
   TCCR1A |= (1 << COM1A1) | (0 << COM1A0);
   TCCR1A |= (1 << COM1B1) | (0 << COM1B0);
   ICR1 = 0x2FF; //~21Khz
+  sei();
 }
 
 void Motor_set(int16_t pwmValue)

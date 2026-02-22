@@ -99,10 +99,6 @@ void Wheel_begin(void)
   attachInterrupt(digitalPinToInterrupt(ENCODER_PIN_B),tick,CHANGE);
   Joystick.setXAxisRange(ENCODER_MIN_VALUE, ENCODER_MAX_VALUE);
 #if FFB
-  pinMode(MOTOR_PIN_A, OUTPUT);
-  pinMode(MOTOR_PIN_B, OUTPUT);
-  pinMode(MOTOR_PIN_ENABLE, OUTPUT);
-  digitalWrite(MOTOR_PIN_ENABLE, HIGH);
   Motor_init();
   Motor_set(0);
   // Scheduler (Timer3 1ms tick) started from main setup
