@@ -144,29 +144,31 @@ void ACS712_update()
   }
 
   // Control law: PI using raw ADC values (integer fixed-point Q8 gains)
-  int32_t error = (int32_t)targetADC - (int32_t)lastADC; // ADC units
+  int16_t error = targetADC - lastADC; // ADC units
 
   // Integrator (per-control-tick interpretation)
-  integrator_q += error;
+  integrator_q += (int32_t)error;
   // anti-windup: clamp integrator to reasonable range
   int32_t integLimit = (int32_t)MAX_ADC_DELTA * 10;
   if (integrator_q > integLimit) integrator_q = integLimit;
   if (integrator_q < -integLimit) integrator_q = -integLimit;
 
-  // Compute control output in Q8 domain: u_q8 = Kp_q8*error + (Ki_q8*integrator)/SCALE_Q8 - (Kd_q8*(error-lastError))/SCALE_Q8
-  int64_t termP = (int64_t)Kp_q8 * (int64_t)error; // Q8 * int -> Q8*int
-  int64_t termI = ((int64_t)Ki_q8 * (int64_t)integrator_q) / (int64_t)SCALE_Q8; // bring back to Q8
-  int64_t termD = 0;
+  // Compute control output in Q8 domain: u_q8 = Kp_q8*error + (Ki_q8*integrator)>>8 - (Kd_q8*(error-lastError))>>8
+  int32_t termP = (int32_t)Kp_q8 * (int32_t)error; // Q8 * int -> Q8*int
+  int32_t termI = ((int32_t)Ki_q8 * integrator_q) >> 8; // bring back to Q8
+  int32_t termD = 0;
   int32_t derror = error - (int32_t)lastError_i;
-  termD = ((int64_t)Kd_q8 * (int64_t)derror) / (int64_t)SCALE_Q8;
+  termD = ((int32_t)Kd_q8 * derror) >> 8;
 
-  int64_t u_q8 = termP + termI - termD;
-  int32_t u = (int32_t)(u_q8 / (int64_t)SCALE_Q8); // back to ADC units
+  int32_t u_q8 = termP + termI - termD;
+  int32_t u = u_q8 >> 8; // back to ADC units
   lastError_i = (int16_t)error;
 
-  // Clamp output to MAX_ADC_DELTA range and convert to motor units
-  if (u > MAX_ADC_DELTA) u = MAX_ADC_DELTA;
-  if (u < -MAX_ADC_DELTA) u = -MAX_ADC_DELTA;
+
+  if(adcDelta >= MAX_ADC_DELTA)
+    if(lastDuty < u) u = lastDuty--; // if we're already at max delta, don't try to push further
+  if(adcDelta <= -MAX_ADC_DELTA)
+    if(lastDuty > u) u = lastDuty--;
 
   int16_t motorVal = (int16_t)u;  // direct ADC delta to motor mapping
   lastDuty = motorVal;
