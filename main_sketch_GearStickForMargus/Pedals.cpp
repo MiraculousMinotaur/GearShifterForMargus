@@ -21,8 +21,8 @@ void Pedals_begin()
   // This function is called after device initialization, so ads.begin() has already been called.
   
   // Set ranges for Joystick output using calibration values as min/max endpoints
-  Joystick.setAcceleratorRange(ACCELERATOR_MIN_VALUE, ACCELERATOR_MAX_VALUE);
-  Joystick.setBrakeRange(BRAKE_MIN_VALUE, BRAKE_MAX_VALUE);
+  Joystick.setRxAxisRange(ACCELERATOR_MIN_VALUE, ACCELERATOR_MAX_VALUE);
+  Joystick.setRyAxisRange(BRAKE_MIN_VALUE, BRAKE_MAX_VALUE);
   Joystick.setZAxisRange(CLUTCH_MIN_VALUE, CLUTCH_MAX_VALUE);
 
   // Initialize ADS values with calibration midpoints for safety
@@ -56,10 +56,10 @@ void Pedals_update()
   // Update Joystick outputs with constrained raw 16-bit values
   // Constrain each raw value to its calibration range [MIN_VALUE, MAX_VALUE]
   int16_t accelValue = constrain(adsValues[ADS_CH_ACCEL], ACCELERATOR_MIN_VALUE, ACCELERATOR_MAX_VALUE);
-  Joystick.setAccelerator((int)accelValue);
+  Joystick.setRxAxis((int)accelValue);
 
   int16_t brakeValue = constrain(adsValues[ADS_CH_BRAKE], BRAKE_MIN_VALUE, BRAKE_MAX_VALUE);
-  Joystick.setBrake((int)brakeValue);
+  Joystick.setRyAxis((int)brakeValue);
 
   int16_t clutchValue = constrain(adsValues[ADS_CH_CLUTCH], CLUTCH_MIN_VALUE, CLUTCH_MAX_VALUE);
   Joystick.setZAxis((int)clutchValue);
