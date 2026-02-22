@@ -72,7 +72,7 @@ void Gears_begin()
   //set all MCP pins as inputs with pull-ups (active-low logic for gear switches)
   for (size_t i = 0; i < 16; ++i) 
   {
-    mcp.pinMode(i INPUT_PULLUP);  // Enable internal pull-up
+    mcp.pinMode(i, INPUT_PULLUP);  // Enable internal pull-up
   }
   // Configure all used MCP pins as inputs with internal pull-ups
   /*for (size_t i = 0; i < sizeof(SixWayPins)/sizeof(SixWayPins[0]); ++i) 

@@ -112,9 +112,12 @@ void loop()
     if (schedCounter & 1)
     {
       Joystick.getUSBPID();
+#if WHEEL
+      Wheel_update();
+#endif
+      Serial.print(micros() - timer);
+      Serial.println(": Wheel update and USB PID");
     }
-    Serial.print(micros() - timer);
-    Serial.println(": Scheduler tick: USB PID step");
     
     // 1.3) Every odd tick: alternate pedals/gears reads (offset from USBPID which runs on even ticks)
     if (schedCounter > 4)
@@ -142,13 +145,6 @@ void loop()
     }
 
     // Wheel update runs each scheduler cycle to update axis and apply FFB/motor targets
-    #if WHEEL
-    timer = micros();
-    Wheel_update();
-    #endif
-    Serial.print(micros() - timer);
-    Serial.println(": Wheel update");
-
     // 1.4) Debug manager at end of cycle
   #if DEBUG
     DebugManager_update();
