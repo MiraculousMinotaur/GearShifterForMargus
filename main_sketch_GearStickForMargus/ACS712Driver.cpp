@@ -15,7 +15,7 @@ static const int16_t SHUTOFF_ADC_DELTA = 300;  // emergency shutoff threshold (c
 static const int16_t DEADBAND_ADC = 10;        // deadband in ADC units (~0.4A); suppresses noise/oscillation
 
 // ADC calibration (10-bit ADC value at zero current)
-static uint16_t zeroADC = 553;
+static uint16_t zeroADC = 513; // Mathematical
 
 // Controller state
 // Note: sampling is done in ISR accumulators (adcSum/adcCount). Do not use samples[]/sampleCount.
@@ -119,7 +119,12 @@ void ACS712_snapshotAndClear(uint16_t *sum, uint16_t *count)
 
 void ACS712_setLastADC(uint16_t v)
 {
-  lastADC = v;
+  static int32_t filteredADC = 0; // Use 32-bit to prevent overflow during math
+
+  // To filter: (CurrentValue * 7 + NewValue) / 8
+  filteredADC = (filteredADC - (filteredADC >> 3)) + (v >> 3);
+
+  lastADC = (int16_t)filteredADC;
 }
 
 void ACS712_update()
@@ -193,12 +198,7 @@ void ACS712_setTargetFromForce(int16_t force)
 {
   // Map force (-MAX_FORCES .. +MAX_FORCES) to ADC range around zeroADC
   // integer mapping: adcTarget = zeroADC + force * MAX_ADC_DELTA / MAX_FORCES
-#if defined(MAX_FORCES)
   int32_t adcTarget = (int32_t)zeroADC + (((int32_t)force * (int32_t)MAX_ADC_DELTA) / (int32_t)MAX_FORCES);
-#else
-  // fallback to 127 if MAX_FORCES not defined
-  int32_t adcTarget = (int32_t)zeroADC + (((int32_t)force * (int32_t)MAX_ADC_DELTA) / 127);
-#endif
   ACS712_setTargetA((uint16_t)adcTarget);
 }
 
