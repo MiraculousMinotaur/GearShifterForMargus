@@ -20,7 +20,7 @@ inline void tick(void)
   
   // 2. Extract Phase A (Pin 2, PD1) and Phase B (Pin 1, PD3)
   // We want to format this as a 2-bit number: [A][B]
-  uint8_t a = (currentState >> 1) & 1;
+  uint8_t a = (currentState >> 2) & 1;
   uint8_t b = (currentState >> 3) & 1;
   uint8_t s = (a << 1) | b;
 
