@@ -34,18 +34,15 @@ void Motor_init(void)
 void Motor_set(int16_t pwmValue)
 {
     lastPWMTarget = pwmValue;
-    // Clamp to PWM limits
-    int16_t clamped = limitVal(pwmValue, (int16_t)-MAX_PWM, (int16_t)MAX_PWM);
-    
-    if (clamped > 0)
+    if (pwmValue > 0)
     {
         OCR1A = 0;
-        OCR1B = clamped;
+        OCR1B = limitVal(CLOCKWISE_BIAS(pwmValue), (int16_t)-MAX_PWM, (int16_t)MAX_PWM);
     }
-    else if (clamped < 0)
+    else if (pwmValue < 0)
     {
         OCR1B = 0;
-        OCR1A = -clamped;
+        OCR1A = -limitVal(pwmValue, (int16_t)-MAX_PWM, (int16_t)MAX_PWM);;
     }
     else
     {

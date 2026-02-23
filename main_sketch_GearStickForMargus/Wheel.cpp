@@ -63,13 +63,13 @@ EffectParams effectparams[2];
 // Self-centering: constant force toward center when no FFB
 #define SELFCENTER_FORCE 80  // constant force magnitude toward center
 
-static int16_t Wheel_computeTargetForce(void)
+static int16_t Wheel_computeTargetForce(int32_t wheelPosition)
 {
   // Check for endpoint breach and apply corrective (dampening) force if needed
-  if (currentPosition > ENCODER_MAX_VALUE)
+  if (wheelPosition > ENCODER_MAX_VALUE)
   {
     // Over max: compute dampening force to push back (positive to return toward center)
-    int32_t dist = currentPosition - ENCODER_MAX_VALUE;
+    int32_t dist = wheelPosition - ENCODER_MAX_VALUE;
     int32_t fullRange = ENCODER_MAX_VALUE - ENCODER_MIN_VALUE;
     // Map distance over limit to a positive force (pulls back toward center)
     int32_t dampingForce = (dist * (int32_t)MAX_FORCES) / ((fullRange / ENDPOINT_BAND) + 1);
@@ -78,10 +78,10 @@ static int16_t Wheel_computeTargetForce(void)
     if (dampingForce > MAX_FORCES) dampingForce = MAX_FORCES;
     return (int16_t)dampingForce;
   }
-  else if (currentPosition < ENCODER_MIN_VALUE)
+  else if (wheelPosition < ENCODER_MIN_VALUE)
   {
     // Under min: compute dampening force to push back (negative to return toward center)
-    int32_t dist = ENCODER_MIN_VALUE - currentPosition;
+    int32_t dist = ENCODER_MIN_VALUE - wheelPosition;
     int32_t fullRange = ENCODER_MAX_VALUE - ENCODER_MIN_VALUE;
     // Map distance over limit to a negative force (pulls back toward center)
     int32_t dampingForce = -(dist * (int32_t)MAX_FORCES) / ((fullRange / ENDPOINT_BAND) + 1);
@@ -100,12 +100,12 @@ static int16_t Wheel_computeTargetForce(void)
   }
 
   // FFB is inactive: apply constant self-centering force toward center
-  if (currentPosition > 0)
+  if (wheelPosition > 0)
   {
     // Pull toward center (negative)
     return SELFCENTER_FORCE;
   }
-  else if (currentPosition < 0)
+  else if (wheelPosition < 0)
   {
     // Pull toward center (positive)
     return -SELFCENTER_FORCE;
@@ -139,7 +139,10 @@ void Wheel_begin(void)
 
 void Wheel_update(void)
 {
-  int32_t wheelOutput = limitVal(currentPosition, (int32_t)ENCODER_MIN_VALUE, (int32_t)ENCODER_MAX_VALUE);
+  cli();
+  int32_t wheelValue = currentPosition;
+  sei();
+  int32_t wheelOutput = limitVal(wheelValue, (int32_t)ENCODER_MIN_VALUE, (int32_t)ENCODER_MAX_VALUE);
   Joystick.setXAxis((int)wheelOutput);
 #if FFB
   effectparams[0].springPosition = (int)wheelOutput;
@@ -147,7 +150,7 @@ void Wheel_update(void)
   Joystick.getForce(forces);
   
   // Compute target force (respects endpoints and FFB)
-  int16_t targetForce = Wheel_computeTargetForce();
+  int16_t targetForce = Wheel_computeTargetForce(wheelValue);
   
   // Send target force to ACS712 (the single motor control authority)
   // ACS712 will convert this force to current target and regulate motor via PI controller
@@ -166,7 +169,9 @@ void Wheel_update(void)
 void Wheel_reportDebug(struct DebugTelemetry_t *tel)
 {
   if (tel) {
+    cli();
     tel->wheel_position = currentPosition;
+    sei();
   }
 }
 #endif

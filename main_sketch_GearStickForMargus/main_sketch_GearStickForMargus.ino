@@ -67,10 +67,6 @@ void setup() {
 #if GEARS
   Gears_begin();
 #endif
-
-
-
-
   // Start the 1ms scheduler and debug manager
   Scheduler_start();
 
