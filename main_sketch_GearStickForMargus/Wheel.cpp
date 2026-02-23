@@ -7,37 +7,32 @@
 #if WHEEL
 
 volatile int32_t currentPosition = 0;
-bool isOutOfRange = false;
+volatile uint8_t lastState = 0; // Last encoder state (2 bits: [A][B])
 
-// Encoder pins on PORTD: A=pin2 (bit 2), B=pin3 (bit 3)
-#define ENCODER_SHIFT 2
-#define ENCODER_MASK 0x03
 
-// Precomputed lookup table for encoder state transitions
-// Index: (oldState << 2) | newState (0-15)
-// Values: position delta (-1, 0, +1)
-static const int8_t encoderTable[16] = {
-  0,  +1, -1,  0,  // oldState=0 (00): 00->+1, 01->-1
-  -1,  0,  0, +1,  // oldState=1 (01): 00->-1, 11->+1
-  +1,  0,  0, -1,  // oldState=2 (10): 00->+1, 11->-1
-  0,  -1, +1,  0   // oldState=3 (11): 01->-1, 10->+1
-};
-
-// Optimized encoder callback: ~20-30 cycles vs ~200 cycles
-// Now called directly from AVR INT2/INT3 hardware interrupt handlers
-static void tick(void)
+// Fast single-channel decode optimized for being called only from INT2 (A pin)
+// Only acts on changes of channel A and uses channel B state to determine direction.
+// This halves resolution compared to full quadrature decoding but is much faster.
+inline void tick(void)
 {
-  static uint8_t oldState = 0;
+// 1. Read the whole D port at once
+  uint8_t currentState = PIND;
   
-  // Read both encoder pins (A=bit2, B=bit3 on PORTD) in 1 CPU cycle
-  uint8_t pins = PIND;
-  uint8_t newState = (pins >> ENCODER_SHIFT) & ENCODER_MASK;
+  // 2. Extract Phase A (Pin 2, PD1) and Phase B (Pin 1, PD3)
+  // We want to format this as a 2-bit number: [A][B]
+  uint8_t a = (currentState >> 1) & 1;
+  uint8_t b = (currentState >> 3) & 1;
+  uint8_t s = (a << 1) | b;
+
+  // 3. Direction logic: (NewPhaseA ^ OldPhaseB)
+  // This is the fastest robust way to determine CW vs CCW
+  if (a ^ (lastState & 1)) {
+    currentPosition++;
+  } else {
+    currentPosition--;
+  }
   
-  // Lookup table: compute index from old and new state
-  uint8_t tableIdx = (oldState << 2) | newState;
-  currentPosition += encoderTable[tableIdx];
-  
-  oldState = newState;
+  lastState = s;
 }
 
 // ===== AVR Hardware Interrupt Handlers for INT2 (pin 0) and INT3 (pin 1) =====
@@ -118,10 +113,11 @@ void Wheel_begin(void)
   
   // Configure AVR hardware interrupts INT2 and INT3 for pins 0 and 1
   // INT2 (pin 0) and INT3 (pin 1) are configured for "any logical change" (CHANGE mode)
-  // EICRA register bits:
-  //   ISC21:20 = 10 (INT2: any logical change)
-  //   ISC31:30 = 10 (INT3: any logical change)
-  EICRA = (EICRA & 0x0F) | 0xA0;  // Preserve lower 4 bits, set INT2 and INT3 to trigger on any change
+  // EICRA - External Interrupt Control Register A
+  // ISC21=0, ISC20=1 -> INT2 triggers on CHANGE
+  // ISC31=0, ISC30=1 -> INT3 triggers on CHANGE
+  EICRA &= ~((1 << ISC21) | (1 << ISC31)); // Clear bits for '0'
+  EICRA |=  ((1 << ISC20) | (1 << ISC30)); // Set bits for '1'
   
   // Enable INT2 and INT3 in the External Interrupt Mask Register
   EIMSK |= (1 << INT2) | (1 << INT3);
