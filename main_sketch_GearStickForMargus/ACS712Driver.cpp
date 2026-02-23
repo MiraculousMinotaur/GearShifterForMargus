@@ -12,6 +12,7 @@ static const int16_t DEFAULT_KI_Q8 = (int16_t)(26); // ~0.1 * 256 = 25.6 -> 26
 static const int16_t DEFAULT_KD_Q8 = (int16_t)(0);
 static const int16_t MAX_ADC_DELTA = 250;      // max ADC delta from zero (corresponds to ~10A)
 static const int16_t SHUTOFF_ADC_DELTA = 300;  // emergency shutoff threshold (corresponds to ~12A)
+static const int16_t DEADBAND_ADC = 10;        // deadband in ADC units (~0.4A); suppresses noise/oscillation
 
 // ADC calibration (10-bit ADC value at zero current)
 static uint16_t zeroADC = 553;
@@ -145,6 +146,11 @@ void ACS712_update()
 
   // Control law: PI using raw ADC values (integer fixed-point Q8 gains)
   int16_t error = targetADC - lastADC; // ADC units
+
+  // Apply deadband: suppress small errors to prevent oscillation and reduce integrator windup
+  if (error > -DEADBAND_ADC && error < DEADBAND_ADC) {
+    error = 0;
+  }
 
   // Integrator (per-control-tick interpretation)
   integrator_q += (int32_t)error;

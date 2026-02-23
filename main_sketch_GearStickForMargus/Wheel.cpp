@@ -58,22 +58,6 @@ int32_t forces[2]={0};
 Gains gains[2];
 EffectParams effectparams[2];
 
-// Timer3 scheduling is handled by the Scheduler module now.
-// beginFFBRequestTimer moved to Scheduler_start() to provide a central 1ms tick.
-
-// PWM initialization moved to Motor_init() in motor.cpp
-// void initPWM() no longer defined here.
-
-// Motor control now goes through ACS712 only, centralizing all Motor_set() calls.
-// Wheel provides target force via ACS712_setTargetFromForce().
-
-// Wheel computes target forces (FFB + endpoint limiting + self-centering) to send to ACS712.
-// This replaces direct motor control with force target setting, allowing the
-// PI controller in ACS712 to smoothly regulate motor current to achieve targets.
-
-// Self-centering: constant force toward center when no FFB
-#define SELFCENTER_FORCE 80  // constant force magnitude toward center
-
 static int16_t Wheel_computeTargetForce(int32_t wheelPosition)
 {
   // Check for endpoint breach and apply corrective (dampening) force if needed
@@ -162,6 +146,7 @@ void Wheel_update(void)
   cli();
   int32_t wheelValue = currentPosition;
   sei();
+  if(ENCODER_DEADZONE > wheelValue || wheelValue < -ENCODER_DEADZONE) { wheelValue = 0;} // Within deadzone
   int32_t wheelOutput = limitVal(wheelValue, (int32_t)ENCODER_MIN_VALUE, (int32_t)ENCODER_MAX_VALUE);
   Joystick.setXAxis((int)wheelOutput);
 #if FFB

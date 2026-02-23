@@ -15,6 +15,8 @@
 // This provides lower latency and reduced overhead compared to Arduino's attachInterrupt()
 #define ENCODER_PIN_A 0  // INT2 hardware interrupt
 #define ENCODER_PIN_B 1  // INT3 hardware interrupt
+// Wheel Consts
+#define ENCODER_DEADZONE 10 // Deadzone around center to prevent noise/oscillation (in encoder units)
 // Encoder Limits
 #define ENCODER_MIN_VALUE -3600 // One Full rotation is 2400
 #define ENCODER_MAX_VALUE 3600
@@ -24,6 +26,8 @@ extern volatile int32_t currentPosition;
 
 #if FFB
 #define MAX_FORCES 250 // Testing revealed Force MAX values is 250
+#define SELFCENTER_FORCE 80 // Constant force applied toward center when FFB is inactive (tuning required)
+
 #endif
 
 void Wheel_begin();
