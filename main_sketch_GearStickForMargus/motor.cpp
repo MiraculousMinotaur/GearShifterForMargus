@@ -50,14 +50,15 @@ ISR(TIMER1_OVF_vect) {
         OCR1B = 0;
         // Absolute value for negative currentDuty
         // On AVR, this is faster than the abs() function
-        OCR1A = (currentDuty < 0) ? -currentDuty : 0;; // tecnically since -0 is still 0, and we can't reach positive value here but let's be safe and use 2 additonal cycles
+        OCR1A = (currentDuty < 0) ? -currentDuty : 0; // tecnically since -0 is still 0, and we can't reach positive value here but let's be safe and use 2 additonal cycles
+    }
 }
 void Motor_set(int16_t pwmValue)
 {
     lastPWMTarget = pwmValue;
     if (pwmValue > 0)
     {
-        duty = CLOCKWISE_BIAS(duty);
+        pwmValue = CLOCKWISE_BIAS(pwmValue);
     }
     int16_t duty = limitVal(pwmValue, -MAX_PWM_WITH_SLEW, MAX_PWM_WITH_SLEW);
     uint8_t sreg = SREG;

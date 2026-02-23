@@ -16,7 +16,7 @@
 #define ENCODER_PIN_A 0  // INT2 hardware interrupt
 #define ENCODER_PIN_B 1  // INT3 hardware interrupt
 // Wheel Consts
-#define ENCODER_DEADZONE 10 // Deadzone around center to prevent noise/oscillation (in encoder units)
+#define ENCODER_DEADZONE 50 // Deadzone around center to prevent noise/oscillation (in encoder units)
 // Encoder Limits
 #define ENCODER_MIN_VALUE -3600 // One Full rotation is 2400
 #define ENCODER_MAX_VALUE 3600
