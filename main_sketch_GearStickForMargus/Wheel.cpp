@@ -24,6 +24,7 @@ static const int8_t encoderTable[16] = {
 };
 
 // Optimized encoder callback: ~20-30 cycles vs ~200 cycles
+// Now called directly from AVR INT2/INT3 hardware interrupt handlers
 static void tick(void)
 {
   static uint8_t oldState = 0;
@@ -37,6 +38,19 @@ static void tick(void)
   currentPosition += encoderTable[tableIdx];
   
   oldState = newState;
+}
+
+// ===== AVR Hardware Interrupt Handlers for INT2 (pin 0) and INT3 (pin 1) =====
+// Pin 0 (INT2) and Pin 1 (INT3) on ATmega32u4 enable direct hardware interrupt support
+// This bypasses Arduino's attachInterrupt layer for lower latency and less overhead
+ISR(INT2_vect)
+{
+  tick();
+}
+
+ISR(INT3_vect)
+{
+  tick();
 }
 
 #if FFB
@@ -53,9 +67,6 @@ EffectParams effectparams[2];
 // Motor control now goes through ACS712 only, centralizing all Motor_set() calls.
 // Wheel provides target force via ACS712_setTargetFromForce().
 
-#endif // FFB
-
-#if FFB
 // Wheel computes target forces (FFB + endpoint limiting + self-centering) to send to ACS712.
 // This replaces direct motor control with force target setting, allowing the
 // PI controller in ACS712 to smoothly regulate motor current to achieve targets.
@@ -120,8 +131,17 @@ void Wheel_begin(void)
 {
   pinMode(ENCODER_PIN_A, INPUT_PULLUP);
   pinMode(ENCODER_PIN_B, INPUT_PULLUP);
-  attachInterrupt(digitalPinToInterrupt(ENCODER_PIN_A),tick,CHANGE);
-  attachInterrupt(digitalPinToInterrupt(ENCODER_PIN_B),tick,CHANGE);
+  
+  // Configure AVR hardware interrupts INT2 and INT3 for pins 0 and 1
+  // INT2 (pin 0) and INT3 (pin 1) are configured for "any logical change" (CHANGE mode)
+  // EICRA register bits:
+  //   ISC21:20 = 10 (INT2: any logical change)
+  //   ISC31:30 = 10 (INT3: any logical change)
+  EICRA = (EICRA & 0x0F) | 0xA0;  // Preserve lower 4 bits, set INT2 and INT3 to trigger on any change
+  
+  // Enable INT2 and INT3 in the External Interrupt Mask Register
+  EIMSK |= (1 << INT2) | (1 << INT3);
+  
   Joystick.setXAxisRange(ENCODER_MIN_VALUE, ENCODER_MAX_VALUE);
 #if FFB
   Motor_init();
