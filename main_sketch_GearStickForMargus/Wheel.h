@@ -26,7 +26,7 @@ extern volatile int32_t currentPosition;
 
 #if FFB
 #define MAX_FORCES 250 // Testing revealed Force MAX values is 250
-#define SELFCENTER_FORCE 80 // Constant force applied toward center when FFB is inactive (tuning required)
+#define SELFCENTER_FORCE 40 // Constant force applied toward center when FFB is inactive (tuning required)
 
 #endif
 
