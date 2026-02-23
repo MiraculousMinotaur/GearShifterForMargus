@@ -142,7 +142,7 @@ void Wheel_update(void)
   cli();
   int32_t wheelValue = currentPosition;
   sei();
-  if(ENCODER_DEADZONE > wheelValue || wheelValue < -ENCODER_DEADZONE) { wheelValue = 0;} // Within deadzone
+  if(ENCODER_DEADZONE > wheelValue && wheelValue > -ENCODER_DEADZONE) { wheelValue = 0;} // Within deadzone
   int32_t wheelOutput = limitVal(wheelValue, (int32_t)ENCODER_MIN_VALUE, (int32_t)ENCODER_MAX_VALUE);
   Joystick.setXAxis((int)wheelOutput);
 #if FFB
