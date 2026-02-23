@@ -16,7 +16,7 @@
 // TODO: Verify these pins don't conflict with GEARS/WHEEL. If conflict exists, provide alternatives in Config.h or a board-specific header.
 // NOTE: ACS712_PIN_SENSE/POWER are A5/A4 (typical I2C pins on AVR/32u4). If enabling PEDALS/GEARS with I2C, consider moving ACS712 to non-I2C pins.
 #define ACS712_PIN_SENSE A5
-#define ACS712_PIN_POWER A4
+#define ACS712_PIN_POWER 4
 
 // I2C Configuration for ADS1115 (pedals) and MCP23017 (gears)
 // ADS1115 -- Continuous conversion mode for pedal potentiometers

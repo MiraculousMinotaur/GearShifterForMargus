@@ -22,11 +22,6 @@
 extern volatile int32_t currentPosition;
 
 #if FFB
-// Motor Pins
-#define MOTOR_PIN_A 9
-#define MOTOR_PIN_B 10
-#define MOTOR_PIN_ENABLE A0
-
 #define MAX_FORCES 250 // Testing revealed Force MAX values is 250
 #endif
 
