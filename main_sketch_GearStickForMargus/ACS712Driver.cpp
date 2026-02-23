@@ -157,7 +157,7 @@ void ACS712_update()
   int32_t termP = (int32_t)Kp_q8 * (int32_t)error; // Q8 * int -> Q8*int
   int32_t termI = ((int32_t)Ki_q8 * integrator_q) >> 8; // bring back to Q8
   int32_t termD = 0;
-  int32_t derror = error - (int32_t)lastError_i;
+  int32_t derror = (int32_t)error - (int32_t)lastError_i;
   termD = ((int32_t)Kd_q8 * derror) >> 8;
 
   int32_t u_q8 = termP + termI - termD;
@@ -166,9 +166,9 @@ void ACS712_update()
 
 
   if(adcDelta >= MAX_ADC_DELTA)
-    if(lastDuty < u) u = lastDuty--; // if we're already at max delta, don't try to push further
+    if(lastDuty < u) u = lastDuty; // if we're already at max delta, don't try to push further
   if(adcDelta <= -MAX_ADC_DELTA)
-    if(lastDuty > u) u = lastDuty++; // if we're already at min delta, don't try to push further
+    if(lastDuty > u) u = lastDuty; // if we're already at min delta, don't try to push further
 
   int16_t motorVal = (int16_t)u;  // direct ADC delta to motor mapping
   lastDuty = motorVal;

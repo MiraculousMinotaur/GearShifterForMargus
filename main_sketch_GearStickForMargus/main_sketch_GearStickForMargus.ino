@@ -74,6 +74,11 @@ void setup() {
   // Start the 1ms scheduler and debug manager
   Scheduler_start();
 
+#if FFB
+  delay(1000);
+  ACS712_calibrateZero();
+#endif
+
 }
 
 ISR(TIMER3_COMPA_vect){
