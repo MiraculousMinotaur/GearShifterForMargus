@@ -5,7 +5,9 @@
 #include <avr/io.h>
 #include "FixedPoint.h"
 
-static int16_t lastPWMTarget = 0; // last PWM value sent to motor
+int16_t lastPWMTarget = 0; // last PWM value sent to motor
+volatile int16_t targetDuty = 0;  // Set by PID
+int16_t currentDuty = 0;
 
 void Motor_init(void)
 {
@@ -28,27 +30,41 @@ void Motor_init(void)
   TCCR1A |= (1 << COM1A1) | (0 << COM1A0);
   TCCR1A |= (1 << COM1B1) | (0 << COM1B0);
   ICR1 = PWM_TIMER_MAX; //~21Khz
+  TIMSK1 |= (1 << TOIE1);
   sei();
 }
 
+ISR(TIMER1_OVF_vect) {
+    // 1. Minimal Slew (No clamps needed because Motor_set rounded the target)
+    if (currentDuty < targetDuty) {
+        currentDuty += SLEW_STEP;
+    } else if (currentDuty > targetDuty) {
+        currentDuty -= SLEW_STEP;
+    }
+
+    // 2. Ultra-fast Bridge Logic
+    if (currentDuty > 0) {
+        OCR1A = 0;
+        OCR1B = currentDuty;
+    } else {
+        OCR1B = 0;
+        // Absolute value for negative currentDuty
+        // On AVR, this is faster than the abs() function
+        OCR1A = (currentDuty < 0) ? -currentDuty : 0;; // tecnically since -0 is still 0, and we can't reach positive value here but let's be safe and use 2 additonal cycles
+}
 void Motor_set(int16_t pwmValue)
 {
     lastPWMTarget = pwmValue;
     if (pwmValue > 0)
     {
-        OCR1A = 0;
-        OCR1B = limitVal(CLOCKWISE_BIAS(pwmValue), (int16_t)-MAX_PWM, (int16_t)MAX_PWM);
+        duty = CLOCKWISE_BIAS(duty);
     }
-    else if (pwmValue < 0)
-    {
-        OCR1B = 0;
-        OCR1A = -limitVal(pwmValue, (int16_t)-MAX_PWM, (int16_t)MAX_PWM);;
-    }
-    else
-    {
-        OCR1B = 0;
-        OCR1A = 0;
-    }
+    int16_t duty = limitVal(pwmValue, -MAX_PWM_WITH_SLEW, MAX_PWM_WITH_SLEW);
+    uint8_t sreg = SREG;
+    cli();
+    targetDuty = duty;
+    SREG = sreg;
+
 }
 
 int16_t Motor_getLastPWMTarget(void)
