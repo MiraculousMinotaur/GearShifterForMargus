@@ -92,7 +92,7 @@ int16_t Wheel_computeTargetForce(int32_t wheelPosition)
     int32_t dist = wheelPosition - ENCODER_MIN_VALUE;
     int32_t stopForce = (dist * (int32_t)MAX_ENDPOINT_FORCES) / ENDSTOP_WIDTH_TICKS;
     
-    if (stopForce < (MAX_ENDPOINT_FORCES / 10)) stopForce = -(MAX_ENDPOINT_FORCES / 10);
+    if (stopForce > (MAX_ENDPOINT_FORCES / 10)) stopForce = -(MAX_ENDPOINT_FORCES / 10);
     
     totalForce += stopForce; // Pushes back CW
   }
