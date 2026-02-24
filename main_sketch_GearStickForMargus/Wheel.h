@@ -29,6 +29,7 @@ extern volatile int32_t currentPosition;
 #define SELFCENTER_ON 1
 #define SELFCENTER_FORCE 50 // Constant force applied toward center when FFB is inactive (tuning required)
 #define SELFCENTER_DEADZONE 20 // Deadzone around center to prevent noise/oscillation (in encoder units)
+void Handle_forces_Idle(void)
 #endif
 
 void Wheel_begin();

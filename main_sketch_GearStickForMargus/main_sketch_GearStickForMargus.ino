@@ -123,7 +123,7 @@ void loop()
       #if GEARS
       Gears_update();
       #endif
-      readPedals = 4; // reset to read pedals for the next 4 cycles
+      readPedals = 3; // reset to read pedals for the next 3 cycles
     }
     schedCounter = 0;
   }
@@ -134,4 +134,6 @@ void loop()
 #endif
   schedCounter++;
   Joystick.sendState(); // Send the current joystick state to the host computer; must be called regularly to ensure timely updates
+
+  Handle_forces_Idle();
 }

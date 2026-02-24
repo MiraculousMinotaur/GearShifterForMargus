@@ -136,15 +136,18 @@ volatile int32_t Get_CurrentPosition(void)
   return currentPosition;
 }
 
+void Handle_forces_Idle(void)
+{
+  Joystick.setEffectParams(effectparams);
+  Joystick.getForce(forces);
+}
+
 void Wheel_update(int32_t wheelValue)
 {
   int32_t wheelOutput = limitVal(wheelValue, (int32_t)ENCODER_MIN_VALUE, (int32_t)ENCODER_MAX_VALUE);
   Joystick.setXAxis((int)wheelOutput);
 #if FFB
   effectparams[0].springPosition = (int)wheelOutput;
-  Joystick.setEffectParams(effectparams);
-  Joystick.getForce(forces);
-  
   // Compute target force (respects endpoints and FFB)
   int16_t targetForce = Wheel_computeTargetForce(wheelValue);
   
