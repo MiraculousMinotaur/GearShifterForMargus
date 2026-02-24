@@ -7,9 +7,9 @@
 #include "DebugManager.h"
 
 // Configurable parameters (raw ADC units, no conversion)
-static const int16_t DEFAULT_KP_Q8 = (int16_t)(767); // 1.0 -> 256
-static const int16_t DEFAULT_KI_Q8 = (int16_t)(52); // ~0.1 * 256 = 25.6 -> 26
-static const int16_t DEFAULT_KD_Q8 = (int16_t)(104);
+static const int16_t DEFAULT_KP_Q8 = (int16_t)(600); // 1.0 -> 256
+static const int16_t DEFAULT_KI_Q8 = (int16_t)(104); // ~0.1 * 256 = 25.6 -> 26
+static const int16_t DEFAULT_KD_Q8 = (int16_t)(208);
 static const int16_t MAX_ADC_DELTA = 250;      // max ADC delta from zero (corresponds to ~10A)
 static const int16_t SHUTOFF_ADC_DELTA = 300;  // emergency shutoff threshold (corresponds to ~12A)
 static const int16_t DEADBAND_ADC = 5;        // deadband in ADC units (~0.25A); suppresses noise/oscillation
