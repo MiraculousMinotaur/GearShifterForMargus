@@ -86,7 +86,7 @@ int16_t Wheel_computeTargetForce(int32_t wheelPosition)
     // Ensure it pushes back hard enough to be felt
     if (stopForce < (MAX_ENDPOINT_FORCES / 10)) stopForce = (MAX_ENDPOINT_FORCES / 10);
     
-    totalForce += stopForce; // Pushes back CCW
+    totalForce = stopForce; // Pushes back CCW
   }
   else if (wheelPosition < ENCODER_MIN_VALUE)
   {
@@ -95,7 +95,7 @@ int16_t Wheel_computeTargetForce(int32_t wheelPosition)
     
     if (stopForce < (MAX_ENDPOINT_FORCES / 10)) stopForce = (MAX_ENDPOINT_FORCES / 10);
     
-    totalForce -= stopForce; // Pushes back CW
+    totalForce = stopForce; // Pushes back CW
   }
 
   // --- 4. FINAL CLAMP ---
