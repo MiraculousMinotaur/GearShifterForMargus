@@ -76,7 +76,7 @@ void setup() {
 #endif
 
 }
-#define WHEEL_UPDATE_RATIO 2 // Update wheel and send USB PID every 2 scheduler cycles (i.e. every 2ms if scheduler runs every 1ms)
+#define WHEEL_UPDATE_RATIO 2 // NB! if lower then 2 USB_PID will not be called. Update wheel and send USB PID every 2 scheduler cycles (i.e. every 2ms if scheduler runs every 1ms)
 volatile int8_t updateTimer = WHEEL_UPDATE_RATIO;
 
 ISR(TIMER3_COMPA_vect){
@@ -87,18 +87,16 @@ ISR(TIMER3_COMPA_vect){
   int32_t wheelValue = Get_CurrentPosition();
   sei();
   // Apply averaged ADC value if samples were collected
-  if (currentCount > 0)
-  {
+  if (currentCount > 0){
     uint16_t avg = currentSum / currentCount;
     ACS712_setLastADC(avg);
   }
   ACS712_update();
-  if(updateTimer >= WHEEL_UPDATE_RATIO) // Update wheel and send USB PID Less often.
-  {
-    Joystick.getUSBPID();
+  if(updateTimer >= WHEEL_UPDATE_RATIO){ // Update wheel and send USB PID Less often.
     Wheel_update(wheelValue);
     updateTimer = 0;
   }
+  else {Joystick.getUSBPID();}
   updateTimer++;
 }
 
