@@ -62,6 +62,7 @@ int16_t Wheel_computeTargetForce(int32_t wheelPosition)
     // FFB is active: use it as target
     totalForce = -ffbForce;
   }
+#if SELFCENTER_ON 
   else// (ffbForce == 0)
   {
     // FFB is inactive: apply self-centering force based on position
@@ -73,6 +74,7 @@ int16_t Wheel_computeTargetForce(int32_t wheelPosition)
       totalForce = 0; // Within deadzone, no force
     }
   }
+#endif
 
   // This is added ON TOP of other forces so you still feel the game 
   // even while hitting the limit.
