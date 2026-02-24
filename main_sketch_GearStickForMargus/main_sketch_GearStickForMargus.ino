@@ -76,13 +76,15 @@ void setup() {
 #endif
 
 }
+#define WHEEL_UPDATE_RATIO 2 // Update wheel and send USB PID every 2 scheduler cycles (i.e. every 2ms if scheduler runs every 1ms)
+volatile int8_t updateTimer = WHEEL_UPDATE_RATIO;
 
 ISR(TIMER3_COMPA_vect){
-  scheduler_ms_flag = 1;//Limit other actions to less then 1Khz just in case.
   uint16_t currentSum = 0;
   uint16_t currentCount = 0;
   // ACS712_snapshotAndClear is non-atomic by design; perform snapshot inside this interrupt-disabled section
   ACS712_snapshotAndClear(&currentSum, &currentCount);
+  int32_t wheelValue = Get_CurrentPosition();
   sei();
   // Apply averaged ADC value if samples were collected
   if (currentCount > 0)
@@ -91,6 +93,13 @@ ISR(TIMER3_COMPA_vect){
     ACS712_setLastADC(avg);
   }
   ACS712_update();
+  if(updateTimer >= WHEEL_UPDATE_RATIO) // Update wheel and send USB PID Less often.
+  {
+    Joystick.getUSBPID();
+    Wheel_update(wheelValue);
+    updateTimer = 0;
+  }
+  updateTimer++;
 }
 
 void loop() 
@@ -98,45 +107,31 @@ void loop()
   // Module updates are scheduled by the 1ms Scheduler (see Scheduler_start and scheduler flag handling).
   // Scheduler-driven tasks triggered from Timer3 (1ms tick)
   static uint8_t schedCounter = 0;
-  if (scheduler_ms_flag)
+  // 1.3) Every odd tick: alternate pedals/gears reads (offset from USBPID which runs on even ticks)
+  if (schedCounter > 4)
   {
-    scheduler_ms_flag = 0;
-    // 1.2) Every other loop: request FFB/USB processing
-    if (schedCounter & 1)
+    static uint8_t readPedals = 3;
+    if (readPedals)
     {
-      Joystick.getUSBPID();
-#if WHEEL
-      Wheel_update();
-#endif
+      #if PEDALS
+      Pedals_update();
+      #endif
+      readPedals--;
     }
-    
-    // 1.3) Every odd tick: alternate pedals/gears reads (offset from USBPID which runs on even ticks)
-    if (schedCounter > 4)
+    else
     {
-      static uint8_t readPedals = 4;
-      if (readPedals)
-      {
-        #if PEDALS
-        Pedals_update();
-        #endif
-        readPedals--;
-      }
-      else
-      {
-        #if GEARS
-        Gears_update();
-        #endif
-        readPedals = 4; // reset to read pedals for the next 4 cycles
-      }
-      schedCounter = 0;
+      #if GEARS
+      Gears_update();
+      #endif
+      readPedals = 4; // reset to read pedals for the next 4 cycles
     }
-
+    schedCounter = 0;
+  }
     // Wheel update runs each scheduler cycle to update axis and apply FFB/motor targets
     // 1.4) Debug manager at end of cycle
-  #if DEBUG
-    DebugManager_update();
-  #endif
-    schedCounter++;
-  }
+#if DEBUG
+  DebugManager_update();
+#endif
+  schedCounter++;
   Joystick.sendState(); // Send the current joystick state to the host computer; must be called regularly to ensure timely updates
 }

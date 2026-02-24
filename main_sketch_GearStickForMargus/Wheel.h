@@ -32,7 +32,9 @@ extern volatile int32_t currentPosition;
 #endif
 
 void Wheel_begin();
-void Wheel_update();
+void Wheel_update(int32_t wheelValue);
+
+volatile int32_t Get_CurrentPosition(void);
 
 // Wheel computes target forces but does not directly control motor.
 // All motor control flows through ACS712 via ACS712_setTargetFromForce().

@@ -81,25 +81,21 @@ int16_t Wheel_computeTargetForce(int32_t wheelPosition)
   {
     int32_t dist = wheelPosition - ENCODER_MAX_VALUE;
     // Simple proportional spring: F = k * x
-    int32_t stopForce = (dist * (int32_t)MAX_ENDPOINT_FORCES) / ENDSTOP_WIDTH_TICKS; // Adjust '100' for stiffness
-    
+    int32_t stopForce = (dist * (int32_t)MAX_ENDPOINT_FORCES) / ENDSTOP_WIDTH_TICKS;
     // Ensure it pushes back hard enough to be felt
     if (stopForce < (MAX_ENDPOINT_FORCES / 10)) stopForce = (MAX_ENDPOINT_FORCES / 10);
     
-    totalForce = stopForce; // Pushes back CCW
+    totalForce += stopForce; // Pushes back CCW
   }
   else if (wheelPosition < ENCODER_MIN_VALUE)
   {
-    int32_t dist = ENCODER_MIN_VALUE - wheelPosition;
+    int32_t dist = wheelPosition - ENCODER_MIN_VALUE;
     int32_t stopForce = (dist * (int32_t)MAX_ENDPOINT_FORCES) / ENDSTOP_WIDTH_TICKS;
     
-    if (stopForce < (MAX_ENDPOINT_FORCES / 10)) stopForce = (MAX_ENDPOINT_FORCES / 10);
+    if (stopForce < (MAX_ENDPOINT_FORCES / 10)) stopForce = -(MAX_ENDPOINT_FORCES / 10);
     
-    totalForce = stopForce; // Pushes back CW
+    totalForce += stopForce; // Pushes back CW
   }
-
-  // --- 4. FINAL CLAMP ---
-  // Ensure the combined forces don't exceed your motor's hardware limits
   return (int16_t)limitVal(totalForce, -(int32_t)MAX_FORCES, (int32_t)MAX_FORCES);
 }
 #endif
@@ -135,11 +131,13 @@ void Wheel_begin(void)
 #endif
 }
 
-void Wheel_update(void)
+volatile int32_t Get_CurrentPosition(void)
 {
-  cli();
-  int32_t wheelValue = currentPosition;
-  sei();
+  return currentPosition;
+}
+
+void Wheel_update(int32_t wheelValue)
+{
   int32_t wheelOutput = limitVal(wheelValue, (int32_t)ENCODER_MIN_VALUE, (int32_t)ENCODER_MAX_VALUE);
   Joystick.setXAxis((int)wheelOutput);
 #if FFB
