@@ -53,56 +53,53 @@ int32_t forces[2]={0};
 Gains gains[2];
 EffectParams effectparams[2];
 
-static int16_t Wheel_computeTargetForce(int32_t wheelPosition)
+int16_t Wheel_computeTargetForce(int32_t wheelPosition)
 {
-  // Check for endpoint breach and apply corrective (dampening) force if needed
+  int32_t totalForce = 0;
+  int16_t ffbForce = (int16_t)forces[0];
+  if (ffbForce != 0)
+  {
+    // FFB is active: use it as target
+    totalForce = -ffbForce;
+  }
+  else// (ffbForce == 0)
+  {
+    // FFB is inactive: apply self-centering force based on position
+    if (wheelPosition > SELFCENTER_DEADZONE) {
+      totalForce = -SELFCENTER_FORCE; // Pull back toward center
+    } else if (wheelPosition < -SELFCENTER_DEADZONE) {
+      totalForce = SELFCENTER_FORCE; // Pull back toward center
+    } else {
+      totalForce = 0; // Within deadzone, no force
+    }
+  }
+
+  // This is added ON TOP of other forces so you still feel the game 
+  // even while hitting the limit.
   if (wheelPosition > ENCODER_MAX_VALUE)
   {
-    // Over max: compute dampening force to push back (positive to return toward center)
     int32_t dist = wheelPosition - ENCODER_MAX_VALUE;
-    int32_t fullRange = ENCODER_MAX_VALUE - ENCODER_MIN_VALUE;
-    // Map distance over limit to a positive force (pulls back toward center)
-    int32_t dampingForce = (dist * (int32_t)MAX_FORCES) / ((fullRange / ENDPOINT_BAND) + 1);
-    // Ensure perceptible minimum magnitude
-    if (dampingForce < (MAX_FORCES / 20)) dampingForce = (MAX_FORCES / 20);
-    if (dampingForce > MAX_FORCES) dampingForce = MAX_FORCES;
-    return (int16_t)dampingForce;
+    // Simple proportional spring: F = k * x
+    int32_t stopForce = (dist * (int32_t)MAX_ENDPOINT_FORCES) / ENDSTOP_WIDTH_TICKS; // Adjust '100' for stiffness
+    
+    // Ensure it pushes back hard enough to be felt
+    if (stopForce < (MAX_ENDPOINT_FORCES / 10)) stopForce = (MAX_ENDPOINT_FORCES / 10);
+    
+    totalForce += stopForce; // Pushes back CCW
   }
   else if (wheelPosition < ENCODER_MIN_VALUE)
   {
-    // Under min: compute dampening force to push back (negative to return toward center)
     int32_t dist = ENCODER_MIN_VALUE - wheelPosition;
-    int32_t fullRange = ENCODER_MAX_VALUE - ENCODER_MIN_VALUE;
-    // Map distance over limit to a negative force (pulls back toward center)
-    int32_t dampingForce = -(dist * (int32_t)MAX_FORCES) / ((fullRange / ENDPOINT_BAND) + 1);
-    // Ensure perceptible minimum magnitude
-    if (dampingForce > -(MAX_FORCES / 20)) dampingForce = -(MAX_FORCES / 20);
-    if (dampingForce < -MAX_FORCES) dampingForce = -MAX_FORCES;
-    return (int16_t)dampingForce;
+    int32_t stopForce = (dist * (int32_t)MAX_ENDPOINT_FORCES) / ENDSTOP_WIDTH_TICKS;
+    
+    if (stopForce < (MAX_ENDPOINT_FORCES / 10)) stopForce = (MAX_ENDPOINT_FORCES / 10);
+    
+    totalForce -= stopForce; // Pushes back CW
   }
 
-  // Within bounds: check for FFB input, otherwise apply self-centering
-  int16_t rawForce = (int16_t)forces[0];
-  if (rawForce != 0)
-  {
-    // FFB is active: use it as target
-    return -rawForce;
-  }
-
-  // FFB is inactive: apply constant self-centering force toward center
-  if (wheelPosition > 0)
-  {
-    // Pull toward center (negative)
-    return SELFCENTER_FORCE;
-  }
-  else if (wheelPosition < 0)
-  {
-    // Pull toward center (positive)
-    return -SELFCENTER_FORCE;
-  }
-
-  // At center: no force needed
-  return 0;
+  // --- 4. FINAL CLAMP ---
+  // Ensure the combined forces don't exceed your motor's hardware limits
+  return (int16_t)limitVal(totalForce, -(int32_t)MAX_FORCES, (int32_t)MAX_FORCES);
 }
 #endif
 
@@ -142,7 +139,6 @@ void Wheel_update(void)
   cli();
   int32_t wheelValue = currentPosition;
   sei();
-  if(ENCODER_DEADZONE > wheelValue && wheelValue > -ENCODER_DEADZONE) { wheelValue = 0;} // Within deadzone
   int32_t wheelOutput = limitVal(wheelValue, (int32_t)ENCODER_MIN_VALUE, (int32_t)ENCODER_MAX_VALUE);
   Joystick.setXAxis((int)wheelOutput);
 #if FFB
