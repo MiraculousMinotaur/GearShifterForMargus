@@ -24,10 +24,9 @@ extern volatile int32_t currentPosition;
 
 #if FFB
 #define MAX_FORCES 250 // Testing revealed Force MAX values is 250
-#define MAX_ENDPOINT_FORCES 500
+#define MAX_ENDPOINT_FORCES MAX_FORCES
 #define ENDSTOP_WIDTH_TICKS 100 // Width of the endstop deadband in encoder ticks
 #define SELFCENTER_ON 1
-#define CENTERING_DAMPENING_MULTIPLIER 2
 #define SELFCENTER_FORCE 50 // Constant force applied toward center when FFB is inactive (tuning required)
 #define SELFCENTER_DEADZONE 50 // Deadzone around center to prevent noise/oscillation (in encoder units)
 #endif

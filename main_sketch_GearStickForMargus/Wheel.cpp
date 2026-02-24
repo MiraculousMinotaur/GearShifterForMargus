@@ -65,16 +65,10 @@ int16_t Wheel_computeTargetForce(int32_t wheelPosition)
 #if SELFCENTER_ON 
   else// (ffbForce == 0)
   {
-    static int16_t velocity = 0;
-    static int32_t lastPosition = 0;
-    velocity = wheelPosition - lastPosition;
-    lastPosition = wheelPosition;
-    totalForce = -velocity*CENTERING_DAMPENING_MULTIPLIER; // Damping force proportional to velocity (tuning required)
-    // FFB is inactive: apply self-centering force based on position
     if (wheelPosition > SELFCENTER_DEADZONE) {
-      totalForce = -SELFCENTER_FORCE; // Pull back toward center
-    } else if (wheelPosition < -SELFCENTER_DEADZONE) {
       totalForce = SELFCENTER_FORCE; // Pull back toward center
+    } else if (wheelPosition < -SELFCENTER_DEADZONE) {
+      totalForce = -SELFCENTER_FORCE; // Pull back toward center
     } else {
       totalForce = 0; // Within deadzone, no force
     }
