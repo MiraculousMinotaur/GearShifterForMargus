@@ -41,31 +41,50 @@ void Pedals_begin()
   ads.startADCReading((MUX_BY_CHANNEL[currentChannel]), /*multishot=*/false);  // Start continuous on accel channel
 }
 
-void Pedals_update()
+enum ads_state_t:uint8_t
 {
-  if(!ads.conversionComplete()){return;} // If conversion not complete, skip this update cycle.
-  // Read the last conversion result (from the previous channel)
-  // ADS1115 returns int16_t where center (0 value) is at max_int16/2 = 32767/2 ≈ 16384
-  adsValues[currentChannel] = ads.getLastConversionResults();
+  IDLE = 0,
+  WAITING_ON_CONVERSION = 1,
+  CONVERTED = 2
+};
 
-  // Cycle to the next channel (0 -> 1 -> 2 -> 3 -> 0)
-  currentChannel = currentChannel < 2?(currentChannel + 1) : 0 ; //
-  
-  ads.startADCReading((MUX_BY_CHANNEL[currentChannel]), /*multishot=*/false);
+ads_state_t currentAdsState = IDLE;
 
-  // Update Joystick outputs with constrained raw 16-bit values
-  // Constrain each raw value to its calibration range [MIN_VALUE, MAX_VALUE]
-  int16_t accelValue = constrain(adsValues[ADS_CH_ACCEL], ACCELERATOR_MIN_VALUE, ACCELERATOR_MAX_VALUE);
-  Joystick.setRxAxis((int)accelValue);
+ads_state_t get_Ads_State()
+{
+  return currentAdsState;
+}
 
-  int16_t brakeValue = constrain(adsValues[ADS_CH_BRAKE], BRAKE_MIN_VALUE, BRAKE_MAX_VALUE);
-  Joystick.setRyAxis((int)brakeValue);
+// Made as a function incase I want to time it better in main loop or something, but for now it's just called from Pedals_update()
+void Report_Pedals(void)
+{
+  // Joystick has it's own constaint.
+  Joystick.setRxAxis((int)adsValues[ADS_CH_ACCEL]);
+  Joystick.setRyAxis((int)adsValues[ADS_CH_BRAKE]);
+  Joystick.setZAxis((int)adsValues[ADS_CH_CLUTCH]);
+}
 
-  int16_t clutchValue = constrain(adsValues[ADS_CH_CLUTCH], CLUTCH_MIN_VALUE, CLUTCH_MAX_VALUE);
-  Joystick.setZAxis((int)clutchValue);
-  
-  // Channel 3 (reference) is read and stored for future use (e.g., calibration, diagnostics)
-  // Currently not used in output but available via adsValues[ADS_CH_REF]
+void Pedals_update(void)
+{
+  switch (currentAdsState)
+  {
+  case IDLE:
+    ads.startADCReading((MUX_BY_CHANNEL[currentChannel]), /*multishot=*/false);
+    currentAdsState = WAITING_ON_CONVERSION;
+    break;
+  case WAITING_ON_CONVERSION:
+    if(!ads.conversionComplete()){return;} // If conversion not complete, skip this update cycle.
+    currentAdsState = CONVERTED;
+    break;
+  case CONVERTED:
+    adsValues[currentChannel] = ads.getLastConversionResults();
+    // Cycle to the next channel (0 -> 1 -> 2 -> 0)
+    currentChannel = currentChannel < 2?(currentChannel + 1) : 0 ; //
+    currentAdsState = IDLE;
+    Report_Pedals();
+  default:
+    break;
+  }
 }
 
 // ===== Debug Report Function =====
