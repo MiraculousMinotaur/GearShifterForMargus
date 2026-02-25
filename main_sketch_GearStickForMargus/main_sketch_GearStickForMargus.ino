@@ -76,10 +76,12 @@ void setup() {
 #endif
 
 }
-#define WHEEL_UPDATE_RATIO 2 // NB! if lower then 2 USB_PID will not be called. Update wheel and send USB PID every 2 scheduler cycles (i.e. every 2ms if scheduler runs every 1ms)
-volatile int8_t updateTimer = WHEEL_UPDATE_RATIO;
+#define WATCHDOG_TIMER 20 //ms
+#define SLOW_SCHEDULER_TIMER 5 //ms //must be smaller then WATCHDOG_TIMER
+volatile int8_t SchedulerTimer = WATCHDOG_TIMER;
 
 ISR(TIMER3_COMPA_vect){
+  SchedulerTimer--;
   uint16_t currentSum = 0;
   uint16_t currentCount = 0;
   // ACS712_snapshotAndClear is non-atomic by design; perform snapshot inside this interrupt-disabled section
@@ -91,47 +93,43 @@ ISR(TIMER3_COMPA_vect){
     uint16_t avg = currentSum / currentCount;
     ACS712_setLastADC(avg);
   }
+  Wheel_update(wheelValue);
   ACS712_update();
-  if(updateTimer >= WHEEL_UPDATE_RATIO){ // Update wheel and send USB PID Less often.
-    Wheel_update(wheelValue);
-    updateTimer = 0;
-  }
-  else {Joystick.getUSBPID();}
-  updateTimer++;
 }
 
 void loop() 
 {
-  // Module updates are scheduled by the 1ms Scheduler (see Scheduler_start and scheduler flag handling).
-  // Scheduler-driven tasks triggered from Timer3 (1ms tick)
-  static uint8_t schedCounter = 0;
-  // 1.3) Every odd tick: alternate pedals/gears reads (offset from USBPID which runs on even ticks)
-  if (schedCounter > 4)
+  if (SchedulerTimer <= WATCHDOG_TIMER-SLOW_SCHEDULER_TIMER)
   {
-    static uint8_t readPedals = 3;
-    if (readPedals)
-    {
-      #if PEDALS
-      Pedals_update();
-      #endif
-      readPedals--;
-    }
-    else
-    {
-      #if GEARS
-      Gears_update();
-      #endif
-      readPedals = 3; // reset to read pedals for the next 3 cycles
-    }
-    schedCounter = 0;
-  }
-    // Wheel update runs each scheduler cycle to update axis and apply FFB/motor targets
-    // 1.4) Debug manager at end of cycle
-#if DEBUG
-  DebugManager_update();
-#endif
-  schedCounter++;
-  Joystick.sendState(); // Send the current joystick state to the host computer; must be called regularly to ensure timely updates
+    Joystick.getUSBPID(); // Regularly check for USB PID data to update FFB effects; runs every scheduler cycle (1ms)
+    Handle_forces_Idle(); // Long flaot based effect calculations
+    Joystick.sendState(); // Send the current joystick state to the host computer; must be called regularly to ensure timely updates
+    SchedulerTimer = SLOW_SCHEDULER_TIMER;
 
-  Handle_forces_Idle();
+    static uint8_t schedCounter = 0;
+    if (schedCounter > 4)
+    {
+      static uint8_t readPedals = 3;
+      if (readPedals)
+      {
+        #if PEDALS
+        Pedals_update();
+        #endif
+        readPedals--;
+      }
+      else
+      {
+        #if GEARS
+        Gears_update();
+        #endif
+        readPedals = 3; // reset to read pedals for the next 3 cycles
+      }
+      schedCounter = 0;
+    }
+    schedCounter++;
+    SchedulerTimer = WATCHDOG_TIMER;
+  }
+#if DEBUG
+    DebugManager_update();
+#endif
 }
