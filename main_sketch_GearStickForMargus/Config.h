@@ -22,7 +22,7 @@
 // ADS1115 -- Continuous conversion mode for pedal potentiometers
 #define ADS1115_I2C_ADDR 0x48
 #define ADS1115_GAIN GAIN_TWOTHIRDS          // Adafruit_ADS1X15 constant; use GAIN_TWOTHIRDS for 0-6.144V, GAIN_ONE for 0-4.096V
-#define ADS1115_DATARATE RATE_ADS1115_250SPS // SPS (samples per second): 8, 16, 32, 64, 128, 250, 475, 860
+#define ADS1115_DATARATE RATE_ADS1115_860SPS // SPS (samples per second): 8, 16, 32, 64, 128, 250, 475, 860
 #define ADS_CH_ACCEL 1                       // ADS1115 channel 1 (A1) -> Accelerator
 #define ADS_CH_BRAKE 0                       // ADS1115 channel 0 (A0) -> Brake
 #define ADS_CH_CLUTCH 2                      // ADS1115 channel 2 (A2) -> Clutch

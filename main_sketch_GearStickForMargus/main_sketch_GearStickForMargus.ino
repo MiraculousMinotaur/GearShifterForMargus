@@ -77,7 +77,7 @@ void setup() {
 
 }
 #define WATCHDOG_TIMER 20 //ms
-#define SLOW_SCHEDULER_TIMER 5 //ms //must be smaller then WATCHDOG_TIMER
+#define SLOW_SCHEDULER_TIMER 3 //ms //must be smaller then WATCHDOG_TIMER
 volatile int8_t SchedulerTimer = WATCHDOG_TIMER;
 
 ISR(TIMER3_COMPA_vect){
@@ -105,17 +105,17 @@ void loop()
     Handle_forces_Idle(); // Long flaot based effect calculations
     Joystick.sendState(); // Send the current joystick state to the host computer; must be called regularly to ensure timely updates
     static bool readGears = false;
-    #if PEDALS
-    if(get_Ads_State() == IDLE){readGears = true;} // Only read gears when ADS is idle to prevent I2C conflicts; this means gears are only updated every ~60ms when pedals are active, but that's acceptable for a gear stick
-    Pedals_update();
-    #endif
-    if(readGears)
+    if(readGears) // If previous Loop started the conversion Read Gears first, give ADS time to complete conversion. 
     {
       #if GEARS
       Gears_update();
       #endif
       readGears = false;
     }
+    #if PEDALS
+    if(get_Ads_State() == IDLE){readGears = true;} // Only read gears when ADS is idle to prevent I2C conflicts; this means gears are only updated every ~60ms when pedals are active, but that's acceptable for a gear stick
+    Pedals_update();
+    #endif
     SchedulerTimer = WATCHDOG_TIMER;
   }
 #if DEBUG
