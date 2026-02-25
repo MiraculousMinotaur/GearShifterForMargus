@@ -41,13 +41,6 @@ void Pedals_begin()
   ads.startADCReading((MUX_BY_CHANNEL[currentChannel]), /*multishot=*/false);  // Start continuous on accel channel
 }
 
-enum ads_state_t:uint8_t
-{
-  IDLE = 0,
-  WAITING_ON_CONVERSION = 1,
-  CONVERTED = 2
-};
-
 ads_state_t currentAdsState = IDLE;
 
 ads_state_t get_Ads_State()

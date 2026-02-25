@@ -23,8 +23,17 @@ const int16_t CLUTCH_MAX_VALUE = 16000;
 // Extern ADS1115 instance (defined in Pedals.cpp)
 extern Adafruit_ADS1115 ads;
 
-void Pedals_begin();
-void Pedals_update();
+enum ads_state_t:uint8_t
+{
+  IDLE = 0,
+  WAITING_ON_CONVERSION = 1,
+  CONVERTED = 2
+};
+
+ads_state_t get_Ads_State(void);
+
+void Pedals_begin(void);
+void Pedals_update(void);
 
 // Debug report function (opaque pointer, actual type defined in DebugManager.h)
 #if DEBUG
