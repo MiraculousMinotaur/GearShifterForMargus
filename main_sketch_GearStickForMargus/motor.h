@@ -13,8 +13,7 @@
 #define PWM_TIMER_MAX 0x2FF // 16-bit timer with ICR1 TOP, corresponds to ~21kHz PWM frequency
 #define MAX_PWM 600 // Going full 255 has higher chance to burn the motor
 #define CLOCKWISE_BIAS(x) (x + (x>>3) + (x>>4)) //1.1875 times multiplication
-#define SLEW_STEP 3 // I don'r expect to need more than 3 and currently going above 3 would lose PID resolution
-const int16_t MAX_PWM_WITH_SLEW = MAX_PWM / SLEW_STEP * SLEW_STEP; // max target that can be reached with slew rate from 0 to MAX_PWM
+#define SLEW_STEP 100 //Slew now in 1KHz loop
 
 
 void Motor_init(void);
