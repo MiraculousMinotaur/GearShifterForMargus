@@ -101,6 +101,7 @@ void loop()
 {
   if (SchedulerTimer <= WATCHDOG_TIMER-SLOW_SCHEDULER_TIMER)
   {
+    SchedulerTimer = WATCHDOG_TIMER;
     Joystick.getUSBPID(); // Regularly check for USB PID data to update FFB effects; runs every scheduler cycle (1ms)
     Handle_forces_Idle(); // Long flaot based effect calculations
     Joystick.sendState(); // Send the current joystick state to the host computer; must be called regularly to ensure timely updates
@@ -116,7 +117,6 @@ void loop()
     if(get_Ads_State() == IDLE){readGears = true;} // Only read gears when ADS is idle to prevent I2C conflicts; this means gears are only updated every ~60ms when pedals are active, but that's acceptable for a gear stick
     Pedals_update();
     #endif
-    SchedulerTimer = WATCHDOG_TIMER;
   }
 #if DEBUG
     DebugManager_update();
