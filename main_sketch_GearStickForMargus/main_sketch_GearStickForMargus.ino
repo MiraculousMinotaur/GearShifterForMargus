@@ -20,7 +20,8 @@ void setup() {
   Serial.begin(115200);
   uint32_t start = millis();
   while (!Serial && millis() - start < 5000) { ; }
-  Serial.println("Serial started");
+  Serial.print(F("Serial started - v"));
+  Serial.println(F(FIRMWARE_VERSION));
   DebugManager_init();
 #endif
 

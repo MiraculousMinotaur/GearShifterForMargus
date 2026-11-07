@@ -5,16 +5,10 @@
 #include "Wheel.h"
 #include "Pedals.h"
 #include "Gears.h"
-#include "motor.h"
 #include <Arduino.h>
-#include <string.h>
 
 // Telemetry buffer
 static DebugTelemetry_t telemetryBuffer = {0};
-
-// Serial command buffer
-static char cmdBuf[64];
-static uint8_t cmdIdx = 0;
 
 // CSV output timing (in milliseconds)
 static const uint32_t CSV_OUTPUT_INTERVAL_MS = 500;  // Output CSV every 500ms
@@ -77,112 +71,8 @@ static void outputCSVTelemetry(void)
   Serial.println();
 }
 
-// ===== Command Processing =====
-static void processCommand(const char *cmd)
-{
-  // Commands:
-  // SENSORS - output current telemetry
-  // MOTOR:START - enable motor control
-  // MOTOR:STOP - disable motor control
-  // MOTOR:CURRENT:<value> - set ACS712 target ADC value (FFB only)
-  // MOTOR:SELFCENTER:ON - enable self-centering (FFB only)
-  // MOTOR:SELFCENTER:OFF - disable self-centering (FFB only)
-  // PID:Kp=<value> - set ACS712 Kp (Q8, FFB only)
-  // PID:Ki=<value> - set ACS712 Ki (Q8, FFB only)
-  // PID:Kd=<value> - set ACS712 Kd (Q8, FFB only)
-  
-  if (strcasecmp(cmd, "SENSORS") == 0) {
-    // Output telemetry immediately
-    outputCSVTelemetry();
-  }
-#if FFB
-  else if (strncasecmp(cmd, "MOTOR:", 6) == 0) {
-    const char *subcmd = cmd + 6;
-    if (strcasecmp(subcmd, "START") == 0) {
-      ACS712_enable(true);
-      Serial.println("OK MOTOR:START");
-    }
-    else if (strcasecmp(subcmd, "STOP") == 0) {
-      ACS712_enable(false);
-      Motor_set(0);
-      Serial.println("OK MOTOR:STOP");
-    }
-    else if (strncasecmp(subcmd, "CURRENT:", 8) == 0) {
-      int adcTarget = atoi(subcmd + 8);
-      ACS712_setTargetA(adcTarget);
-      Serial.print("OK MOTOR:CURRENT:");
-      Serial.println(adcTarget);
-    }
-    else if (strncasecmp(subcmd, "SELFCENTER:", 11) == 0) {
-      const char *onoff = subcmd + 11;
-      if (strcasecmp(onoff, "ON") == 0) {
-        Serial.println("OK MOTOR:SELFCENTER:ON (not yet implemented)");
-      }
-      else if (strcasecmp(onoff, "OFF") == 0) {
-        Serial.println("OK MOTOR:SELFCENTER:OFF (not yet implemented)");
-      }
-      else {
-        Serial.println("ERR MOTOR:SELFCENTER invalid");
-      }
-    }
-    else {
-      Serial.print("ERR MOTOR unknown: ");
-      Serial.println(subcmd);
-    }
-  }
-  else if (strncasecmp(cmd, "PID:", 4) == 0) {
-    const char *param = cmd + 4;
-    // Parse format: "Kp=<value>" or "Ki=<value>" or "Kd=<value>"
-    
-    if (strncasecmp(param, "Kp=", 3) == 0) {
-      int16_t value = (int16_t)atoi(param + 3);
-      ACS712_setGains_q8(value, -1, -1);
-      Serial.print("OK PID:Kp=");
-      Serial.println(value);
-    }
-    else if (strncasecmp(param, "Ki=", 3) == 0) {
-      int16_t value = (int16_t)atoi(param + 3);
-      ACS712_setGains_q8(-1, value, -1);
-      Serial.print("OK PID:Ki=");
-      Serial.println(value);
-    }
-    else if (strncasecmp(param, "Kd=", 3) == 0) {
-      int16_t value = (int16_t)atoi(param + 3);
-      ACS712_setGains_q8(-1, -1, value);
-      Serial.print("OK PID:Kd=");
-      Serial.println(value);
-    }
-    else {
-      Serial.print("ERR PID unknown: ");
-      Serial.println(param);
-    }
-  }
-#endif
-  else {
-    Serial.print("ERR UNK CMD: ");
-    Serial.println(cmd);
-  }
-}
-
 void DebugManager_update(void)
 {
-  // === Handle serial input (non-blocking) ===
-  /*while (Serial.available())
-  {
-    char c = Serial.read();
-    if (c == '\r' || c == '\n') {
-      if (cmdIdx > 0) {
-        cmdBuf[cmdIdx] = '\0';
-        processCommand(cmdBuf);
-        cmdIdx = 0;
-      }
-    } else {
-      if (cmdIdx < (sizeof(cmdBuf) - 1)) {
-        cmdBuf[cmdIdx++] = c;
-      }
-    }
-  }
-*/
   // === Collect telemetry from all modules ===
   #if WHEEL
   Wheel_reportDebug(&telemetryBuffer);

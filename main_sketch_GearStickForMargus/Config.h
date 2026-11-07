@@ -1,6 +1,8 @@
 #ifndef CONFIG_H
 #define CONFIG_H
 
+#define FIRMWARE_VERSION "1.0.0"
+
 // Feature flags -- centralized so .cpp/.h files can see the same values as the .ino
 #define DEBUG 0
 #define PEDALS 1
