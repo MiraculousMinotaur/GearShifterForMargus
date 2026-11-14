@@ -1,0 +1,10 @@
+default_profile: default
+
+profiles:
+  default:
+    fqbn: arduino:avr:leonardo
+    libraries:
+      - dir: ../lib/ArduinoJoystickWithFFBLibrary
+      - dir: ../lib/Adafruit_ADS1X15
+      - dir: ../lib/Adafruit_BusIO
+      - dir: ../lib/Adafruit_MCP23017

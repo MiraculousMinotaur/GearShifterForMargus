@@ -1,0 +1,26 @@
+{
+    "configurations": [
+        {
+            "name": "Arduino Leonardo",
+            "includePath": [
+                "${workspaceFolder}/main_sketch_GearStickForMargus/**",
+                "${workspaceFolder}/lib/**",
+                "${workspaceFolder}/lib/ArduinoJoystickWithFFBLibrary/src/**",
+                "${workspaceFolder}/lib/Adafruit_ADS1X15/**",
+                "${workspaceFolder}/lib/Adafruit_BusIO/**",
+                "${workspaceFolder}/lib/Adafruit_MCP23017/src/**"
+            ],
+            "defines": [
+                "USBCON",
+                "ARDUINO=10808",
+                "ARDUINO_AVR_LEONARDO",
+                "ARDUINO_ARCH_AVR",
+                "__AVR_ATmega32U4__",
+                "F_CPU=16000000L"
+            ],
+            "cStandard": "c11",
+            "cppStandard": "c++11"
+        }
+    ],
+    "version": 4
+}
