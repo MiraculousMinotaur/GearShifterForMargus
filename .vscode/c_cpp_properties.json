@@ -1,0 +1,53 @@
+{
+    "configurations": [
+        {
+            "name": "Arduino Leonardo (Linux)",
+            "includePath": [
+                "${workspaceFolder}/main_sketch_GearStickForMargus/**",
+                "${workspaceFolder}/lib/**",
+                "${workspaceFolder}/lib/ArduinoJoystickWithFFBLibrary/src/**",
+                "${workspaceFolder}/lib/Adafruit_ADS1X15/**",
+                "${workspaceFolder}/lib/Adafruit_BusIO/**",
+                "${workspaceFolder}/lib/Adafruit_MCP23017/src/**",
+                "/usr/share/arduino/hardware/arduino/avr/cores/arduino/**",
+                "/usr/share/arduino/hardware/arduino/avr/variants/leonardo/**",
+                "~/.arduino15/packages/arduino/hardware/avr/**/cores/arduino/**",
+                "~/.arduino15/packages/arduino/hardware/avr/**/variants/leonardo/**"
+            ],
+            "defines": [
+                "USBCON",
+                "ARDUINO=10808",
+                "ARDUINO_AVR_LEONARDO",
+                "ARDUINO_ARCH_AVR",
+                "__AVR_ATmega32U4__",
+                "F_CPU=16000000L"
+            ],
+            "cStandard": "c11",
+            "cppStandard": "c++11"
+        },
+        {
+            "name": "Arduino Leonardo (Windows)",
+            "includePath": [
+                "${workspaceFolder}/main_sketch_GearStickForMargus/**",
+                "${workspaceFolder}/lib/**",
+                "${workspaceFolder}/lib/ArduinoJoystickWithFFBLibrary/src/**",
+                "${workspaceFolder}/lib/Adafruit_ADS1X15/**",
+                "${workspaceFolder}/lib/Adafruit_BusIO/**",
+                "${workspaceFolder}/lib/Adafruit_MCP23017/src/**",
+                "${env:LOCALAPPDATA}/Arduino15/packages/arduino/hardware/avr/**/cores/arduino/**",
+                "${env:LOCALAPPDATA}/Arduino15/packages/arduino/hardware/avr/**/variants/leonardo/**"
+            ],
+            "defines": [
+                "USBCON",
+                "ARDUINO=10808",
+                "ARDUINO_AVR_LEONARDO",
+                "ARDUINO_ARCH_AVR",
+                "__AVR_ATmega32U4__",
+                "F_CPU=16000000L"
+            ],
+            "cStandard": "c11",
+            "cppStandard": "c++11"
+        }
+    ],
+    "version": 4
+}

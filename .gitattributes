@@ -1,0 +1,6 @@
+# Ensure shell scripts and Makefile always use LF line endings
+*.sh text eol=lf
+Makefile text eol=lf
+
+# PowerShell scripts
+*.ps1 text eol=crlf

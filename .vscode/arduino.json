@@ -1,0 +1,6 @@
+{
+    "sketch": "main_sketch_GearStickForMargus/main_sketch_GearStickForMargus.ino",
+    "board": "arduino:avr:leonardo",
+    "configuration": "cpu=atmega32u4"
+}
+

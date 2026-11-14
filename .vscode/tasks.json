@@ -1,0 +1,35 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "Build (Makefile)",
+            "type": "shell",
+            "command": "make",
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
+            "problemMatcher": ["$gcc"]
+        },
+        {
+            "label": "Build (arduino-cli)",
+            "type": "shell",
+            "command": "arduino-cli compile main_sketch_GearStickForMargus",
+            "group": "build",
+            "problemMatcher": ["$gcc"]
+        },
+        {
+            "label": "Build (PlatformIO)",
+            "type": "shell",
+            "command": "pio run",
+            "group": "build",
+            "problemMatcher": ["$gcc"]
+        },
+        {
+            "label": "Upload (Makefile)",
+            "type": "shell",
+            "command": "make upload",
+            "problemMatcher": []
+        }
+    ]
+}

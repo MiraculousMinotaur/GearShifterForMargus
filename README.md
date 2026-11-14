@@ -7,9 +7,9 @@ This project integrates three essential sim-driving hardware components into a s
 2. **3 Analog Pedals** (Throttle, Brake, Clutch) read with external I2C ADC (ADS1115 16-bit or ADS1015 12-bit).
 3. **Multi-mode H-Pattern Shifter** (6 forward gears, reverse, range switch, and splitter toggles) powered by a 16-bit I2C GPIO expander (MCP23017).
 
-> [!IMPORTANT]
-> **Windows-Only Force Feedback Notice:**
-> Force Feedback (FFB) currently works **only under Windows**. The underlying `ArduinoJoystickWithFFBLibrary` relies on the DirectInput USB HID PID (Physical Interface Device) drivers provided natively by Windows. Under Linux and macOS, the device will enumerate and function as a standard joystick/wheel with pedals and shifter, but FFB effect commands are not supported out of the box.
+> [!NOTE]
+> **Cross-Platform Force Feedback Notice:**
+> The bundled `ArduinoJoystickWithFFBLibrary` submodule tracks the `add/linux` branch with full USB HID PID compatibility for the Linux kernel's `hid-pidff` driver as well as Windows DirectInput. On both Linux and Windows, the device registers as a composite gaming device with force feedback effects, pedals, and shifter.
 
 ---
 
@@ -80,38 +80,88 @@ This project integrates three essential sim-driving hardware components into a s
 ## Quick Start & Build Instructions
 
 ### 1. Clone with Submodules
-This repository relies on several bundled libraries (as submodules in `lib/`):
+This repository bundles its required hardware libraries (`ArduinoJoystickWithFFBLibrary`, `Adafruit_ADS1X15`, `Adafruit_BusIO`, `Adafruit_MCP23017`) as git submodules in `lib/`:
+
 ```bash
 git clone --recurse-submodules https://github.com/MiraculousMinotaur/GearShifterForMargus.git
+cd GearShifterForMargus
 ```
+
 If you already cloned without submodules:
 ```bash
-cd GearShifterForMargus
 git submodule update --init --recursive
 ```
 
-### 2. Install Required Libraries into Arduino Sketchbook
-The Arduino IDE expects libraries to reside in your personal sketchbook folder (`Documents/Arduino/libraries`). You can create directory junctions on Windows so that git submodule updates are instantly visible to the IDE:
+---
 
-```powershell
-New-Item -ItemType Directory -Force -Path "$HOME\Documents\Arduino\libraries"
-cmd /c mklink /J "$HOME\Documents\Arduino\libraries\ArduinoJoystickWithFFBLibrary" "C:\Repos\GearShifterForMargus\lib\ArduinoJoystickWithFFBLibrary"
-cmd /c mklink /J "$HOME\Documents\Arduino\libraries\Adafruit_ADS1X15" "C:\Repos\GearShifterForMargus\lib\Adafruit_ADS1X15"
-cmd /c mklink /J "$HOME\Documents\Arduino\libraries\Adafruit_BusIO" "C:\Repos\GearShifterForMargus\lib\Adafruit_BusIO"
-cmd /c mklink /J "$HOME\Documents\Arduino\libraries\Adafruit_MCP23017" "C:\Repos\GearShifterForMargus\lib\Adafruit_MCP23017"
-```
+### 2. Build on Any Platform
 
-### 3. Compile and Upload
-#### Using Arduino IDE (2.x):
-1. Open `main_sketch_GearStickForMargus/main_sketch_GearStickForMargus.ino`.
-2. Select **Tools > Board > Arduino AVR Boards > Arduino Leonardo**.
-3. Select your device's COM port under **Tools > Port**.
-4. Click **Upload** (`Ctrl + U`).
+All compiler configurations and library include paths are pre-configured in the repository. You can build on Linux, macOS, or Windows using any of the following workflows:
 
-#### Using Arduino CLI:
+#### Option A: Using `make` (Linux / macOS Recommended)
+The repository includes a root [`Makefile`](Makefile) that automatically verifies submodules and invokes the available compiler:
+
 ```bash
-arduino-cli compile --fqbn arduino:avr:leonardo main_sketch_GearStickForMargus --libraries lib --upload -p COMx
+# 1. (First-time setup if using arduino-cli) Install AVR board core:
+make setup
+
+# 2. Compile:
+make
+
+# 3. Upload to Arduino Leonardo:
+make upload PORT=/dev/ttyACM0    # (Linux/macOS: /dev/ttyACM0 or /dev/ttyUSB0, Windows: COMx)
+
+# 4. Open Serial Monitor (115200 baud):
+make monitor PORT=/dev/ttyACM0
 ```
+
+#### Option B: Using Arduino CLI
+The sketch folder contains [`main_sketch_GearStickForMargus/sketch.yaml`](main_sketch_GearStickForMargus/sketch.yaml), which locks the `arduino:avr:leonardo` target board and maps local submodules from `lib/`:
+
+```bash
+# 1. Install Arduino AVR core (once):
+arduino-cli core install arduino:avr
+
+# 2. Compile:
+arduino-cli compile main_sketch_GearStickForMargus
+
+# 3. Upload:
+arduino-cli upload -p /dev/ttyACM0 --fqbn arduino:avr:leonardo main_sketch_GearStickForMargus
+```
+
+#### Option C: Using PlatformIO
+The repository includes [`platformio.ini`](platformio.ini) with deep library dependency scanning (`lib_ldf_mode = deep+`):
+
+```bash
+# Compile
+pio run
+
+# Upload
+pio run -t upload --upload-port /dev/ttyACM0
+```
+
+#### Option D: Using Standalone Build Scripts
+Automated scripts handle submodule checks and toolchain detection:
+- **Linux / macOS (Bash):**
+  ```bash
+  chmod +x scripts/build.sh
+  ./scripts/build.sh
+  ```
+- **Windows (PowerShell):**
+  ```powershell
+  .\scripts\build.ps1
+  ```
+
+#### Option E: Using Arduino IDE
+- **Arduino IDE 2.x:**
+  1. Open `main_sketch_GearStickForMargus/main_sketch_GearStickForMargus.ino`. The IDE automatically recognizes `sketch.yaml` with the board profile and `lib/` submodules.
+  2. Select your device port under **Tools > Port**.
+  3. Click **Upload** (`Ctrl + U`).
+- **Classic Arduino IDE 1.8.x (Sketchbook Linking):**
+  If using classic Arduino IDE 1.x without `sketch.yaml` support, link the local submodules into your Arduino sketchbook:
+  - **Linux / macOS:** `./scripts/link_libraries.sh`
+  - **Windows:** `.\scripts\link_libraries.ps1`
+  Then open the sketch and click **Upload**.
 
 ---
 
