@@ -90,39 +90,28 @@ cd GearShifterForMargus
 git submodule update --init --recursive
 ```
 
-### 2. Compile and Upload
+### 2. Install Required Libraries into Arduino Sketchbook
+The Arduino IDE expects libraries to reside in your personal sketchbook folder (`Documents/Arduino/libraries`). You can create directory junctions on Windows so that git submodule updates are instantly visible to the IDE:
 
-Because all dependencies are tracked as submodules under `lib/`, the project includes native configuration profiles for all major compilers and IDEs:
-
-#### Option A: Using Arduino CLI or Arduino IDE (2.x)
-The project includes [`main_sketch_GearStickForMargus/sketch.yaml`](main_sketch_GearStickForMargus/sketch.yaml), which automatically binds the board configuration and all local submodule libraries:
-```bash
-# Compile (automatically uses Leonardo board profile and lib/ submodules)
-arduino-cli compile main_sketch_GearStickForMargus
-
-# Upload to your board
-arduino-cli upload -p COMx -b arduino:avr:leonardo main_sketch_GearStickForMargus
+```powershell
+New-Item -ItemType Directory -Force -Path "$HOME\Documents\Arduino\libraries"
+cmd /c mklink /J "$HOME\Documents\Arduino\libraries\ArduinoJoystickWithFFBLibrary" "C:\Repos\GearShifterForMargus\lib\ArduinoJoystickWithFFBLibrary"
+cmd /c mklink /J "$HOME\Documents\Arduino\libraries\Adafruit_ADS1X15" "C:\Repos\GearShifterForMargus\lib\Adafruit_ADS1X15"
+cmd /c mklink /J "$HOME\Documents\Arduino\libraries\Adafruit_BusIO" "C:\Repos\GearShifterForMargus\lib\Adafruit_BusIO"
+cmd /c mklink /J "$HOME\Documents\Arduino\libraries\Adafruit_MCP23017" "C:\Repos\GearShifterForMargus\lib\Adafruit_MCP23017"
 ```
 
-#### Option B: Using PlatformIO
-The repository includes [`platformio.ini`](platformio.ini) pre-configured with `lib_dir = lib` and `leonardo` environment:
-```bash
-pio run
-pio run -t upload
-```
+### 3. Compile and Upload
+#### Using Arduino IDE (2.x):
+1. Open `main_sketch_GearStickForMargus/main_sketch_GearStickForMargus.ino`.
+2. Select **Tools > Board > Arduino AVR Boards > Arduino Leonardo**.
+3. Select your device's COM port under **Tools > Port**.
+4. Click **Upload** (`Ctrl + U`).
 
-#### Option C: Using Arduino IDE (Classic 1.x or GUI without sketch profile)
-To make the submodule libraries globally discoverable across sketches and the classic Arduino IDE, run the automated setup script for your OS:
-- **Windows (PowerShell):**
-  ```powershell
-  .\scripts\link_libraries.ps1
-  ```
-- **Linux / macOS (Bash):**
-  ```bash
-  chmod +x scripts/link_libraries.sh
-  ./scripts/link_libraries.sh
-  ```
-Then open `main_sketch_GearStickForMargus/main_sketch_GearStickForMargus.ino`, select **Arduino Leonardo**, and hit **Upload** (`Ctrl + U`).
+#### Using Arduino CLI:
+```bash
+arduino-cli compile --fqbn arduino:avr:leonardo main_sketch_GearStickForMargus --libraries lib --upload -p COMx
+```
 
 ---
 
