@@ -119,27 +119,48 @@ Under Windows, ETS2 provides rich physics-based force feedback. Recommended in-g
 
 ---
 
-## 4. Profile Configuration File (`controls.sii`)
+## 4. Custom Gearbox Layout File (`gearbox_layout_MARGUS_12_2.sii`)
 
-ETS2 and ATS store all device GUIDs, axis curves, button bindings, and deadzones inside a single profile file named `controls.sii`.
+This repository includes a custom ETS2 gearbox layout definition file: [`docs/gearbox_layout_MARGUS_12_2.sii`](gearbox_layout_MARGUS_12_2.sii).
 
-### Location on Windows
+This file configures ETS2's H-shifter layout specifically for this shifter's 12+2 speed transmission setup ("Margus 12+2"):
+- **Crawler Gears:** C1 and C2
+- **Forward Gears:** 1 through 12 (Low Range: 1–6, High Range: 7–12)
+- **Reverse Gears:** R1 through R4
+- **Selectors:**
+  - `selector_1`: Mode/Range (Switch state `0` = Low Range, `1` = Reverse/Crawler mode)
+  - `selector_2`: Range/Splitter (Switch state `0` = Low, `1` = High Range)
+
+### How to Install the Custom Gearbox Layout in ETS2
+
+ETS2 user gearbox layouts are placed in your active driver profile folder:
+
+#### Step 1: Locate Your ETS2 Profile Folder
+On Windows, navigate to:
 ```text
-%USERPROFILE%\Documents\Euro Truck Simulator 2\profiles\<profile_id>\controls.sii
+%USERPROFILE%\Documents\Euro Truck Simulator 2\profiles\<profile_id>\
 ```
-*(Where `<profile_id>` is an alphanumeric folder name representing your active in-game driver profile).*
+*(or for Steam Cloud synchronized profiles: `%USERPROFILE%\Documents\Euro Truck Simulator 2\steam_profiles\<profile_id>\`)*
 
-### Pre-Configured `controls.sii` Profile (Coming Soon)
-A tested, fully tuned `controls.sii` file will be added to this repository by the maintainer. Once provided, it will allow you to instantly import:
-- Exact pedal non-linear response curves.
-- Ideal Force Feedback gain curves and damper levels.
-- Pre-mapped 6-speed H-pattern, Reverse, Range, and Splitter bindings.
+`<profile_id>` is an alphanumeric folder name representing your driver profile.
 
-#### How to apply when the file is available:
-1. Make a backup copy of your existing `controls.sii`.
-2. Copy the repository's `controls.sii` into your profile folder:
-   ```powershell
-   Copy-Item "controls.sii" "$HOME\Documents\Euro Truck Simulator 2\profiles\<profile_id>\controls.sii"
-   ```
-3. Launch ETS2 and verify that the steering, pedals, and shifter buttons are populated automatically.
+#### Step 2: Copy the `.sii` File
+Copy `docs/gearbox_layout_MARGUS_12_2.sii` into that profile folder:
+```powershell
+Copy-Item "C:\Repos\GearShifterForMargus\docs\gearbox_layout_MARGUS_12_2.sii" "$HOME\Documents\Euro Truck Simulator 2\profiles\<profile_id>\"
+```
+
+#### Step 3: Select the Layout In-Game
+1. Launch **Euro Truck Simulator 2**.
+2. Go to **Options > Controls**.
+3. Under **H-Shifter Setup**, locate **Shifter Layout**.
+4. Select **Margus 12+2** from the drop-down list.
+
+---
+
+## 5. Controls Configuration (`controls.sii`)
+
+ETS2 and ATS store individual controller GUIDs, button bindings, axis calibrations, and deadzones in `controls.sii` inside your profile folder (`%USERPROFILE%\Documents\Euro Truck Simulator 2\profiles\<profile_id>\controls.sii`).
+
+When setting up your controls manually using the steps in [Section 2](#2-in-game-controls-configuration-ets2--ats), ETS2 will automatically save your calibrated axis endpoints and button mappings to this file. Always back up your `controls.sii` before making major controller changes.
 

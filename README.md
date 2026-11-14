@@ -141,7 +141,7 @@ For comprehensive technical explanations and walkthroughs, refer to the document
 - 🛠️ [**Hardware Configuration & Customization Guide**](docs/HARDWARE_CONFIGURATION.md):
   Instructions on adapting the firmware for different button layouts, adding more switches or an 8-speed gate, rewiring active-high/active-low inputs, tuning wheel encoder limits, and recalibrating pedal potentiometers.
 - 🚛 [**Euro Truck Simulator 2 (ETS2 / ATS) Setup Guide**](docs/ETS2_SETUP.md):
-  Step-by-step configuration for ETS2/ATS Range-Splitter transmissions, button assignments, switch mode behavior, and Windows Force Feedback setup. Includes details on using the upcoming `controls.sii` profile file.
+  Step-by-step configuration for ETS2/ATS Range-Splitter transmissions, button assignments, switch mode behavior, Windows Force Feedback setup, and installation instructions for the included custom [`docs/gearbox_layout_MARGUS_12_2.sii`](docs/gearbox_layout_MARGUS_12_2.sii) gearbox layout.
 
 ---
 
